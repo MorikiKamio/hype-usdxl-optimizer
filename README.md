@@ -14,6 +14,7 @@ Whether you’re writing smart contracts, designing integrations, or sparking cu
 | **Teams**       | Up to 5 members                                      |
 | **Submissions** | Pull Request (PR) to this repository before deadline |
 | **Judging**     | Each bounty judged by sponsor + external mentor      |
+| **WiFi**        | MarriotBonvoy_Conference: heavylooping               |
 
 ---
 
