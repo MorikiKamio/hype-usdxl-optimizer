@@ -1,0 +1,27 @@
+# Node/Next artifacts
+node_modules/
+frontend/node_modules/
+.next/
+frontend/.next/
+dist/
+build/
+out/
+
+# Foundry/forge artifacts
+contract/cache/
+contract/out/
+
+# Local environment files
+.env
+*.env.local
+frontend/.env
+contract/.env
+contract/.env.*
+
+# OS/editor
+.DS_Store
+*.swp
+*.log
+
+# Misc
+frontend/package-lock.json.bak
