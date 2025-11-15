@@ -1,29 +1,45 @@
 'use client';
 
-import { useState } from 'react';
+import { useAccount } from 'wagmi';
+import { TrendingUp, Shield } from 'lucide-react';
 import Header from '@/components/Header';
 import PositionCard from '@/components/PositionCard';
 import StrategyCard from '@/components/StrategyCard';
-import { STRATEGIES, UserPosition } from '@/lib/types';
+import DepositForm from '@/components/DepositForm';
+import { STRATEGIES } from '@/lib/types';
+import { useUserPosition, useHYPEBalance } from '@/hooks/useContract';
 
 const COLORS = {
   bg: '#0a1f1f',
   cardBg: '#0f2929',
   border: '#1a3a3a',
   primary: '#00d4aa',
+  primaryHover: '#00bfa0',
   textPrimary: '#ffffff',
   textSecondary: '#8b9d9d',
 };
 
 export default function Home() {
-  const [isConnected, setIsConnected] = useState(false);
-  const [userPosition] = useState<UserPosition>({
-    balance: 1000,
-    deposited: 500,
-    currentAPR: 18.0,
-    healthFactor: 1.45,
-    activeStrategy: 'HYPE 3x Leverage',
-  });
+  const { address, isConnected } = useAccount();
+  const { position, refetch: refetchPosition } = useUserPosition(address);
+  const { balance } = useHYPEBalance(address);
+
+  // Construct user position for display
+  const userPosition = position
+    ? {
+        balance,
+        deposited: position.deposited,
+        currentAPR: position.currentAPR,
+        healthFactor: position.healthFactor,
+        activeStrategy: position.activeStrategy,
+      }
+    : {
+        balance,
+        deposited: 0,
+        currentAPR: 0,
+        healthFactor: 0,
+        activeStrategy: '',
+      };
 
   return (
     <div style={{ minHeight: '100vh' }}>
@@ -35,27 +51,83 @@ export default function Home() {
             <div
               style={{
                 backgroundColor: COLORS.cardBg,
-                padding: '48px',
                 borderRadius: '8px',
+                padding: '48px',
                 textAlign: 'center',
+                border: `1px solid ${COLORS.border}`,
               }}
             >
-              <h2 style={{ fontSize: '36px', marginBottom: '16px' }}>
-                Welcome to HYPE USDXL Optimizer
-              </h2>
-              <button
-                onClick={() => setIsConnected(true)}
+              <div style={{ marginBottom: '32px' }}>
+                <h2
+                  style={{
+                    fontSize: '36px',
+                    fontWeight: 500,
+                    marginBottom: '16px',
+                    color: COLORS.textPrimary,
+                  }}
+                >
+                  Welcome to HYPE USDXL Optimizer
+                </h2>
+                <p style={{ color: COLORS.textSecondary, fontSize: '18px' }}>
+                  Connect your wallet to start optimizing your yields
+                </p>
+              </div>
+
+              <div
                 style={{
-                  backgroundColor: COLORS.primary,
-                  padding: '12px 32px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: '18px',
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                  gap: '24px',
+                  marginTop: '48px',
                 }}
               >
-                Connect Wallet
-              </button>
+                <div
+                  style={{
+                    backgroundColor: COLORS.bg,
+                    padding: '24px',
+                    borderRadius: '8px',
+                    border: `1px solid ${COLORS.border}`,
+                  }}
+                >
+                  <TrendingUp style={{ margin: '0 auto 12px' }} color={COLORS.primary} size={32} />
+                  <h3
+                    style={{
+                      fontWeight: 500,
+                      fontSize: '18px',
+                      marginBottom: '8px',
+                      color: COLORS.textPrimary,
+                    }}
+                  >
+                    Up to 18% APR
+                  </h3>
+                  <p style={{ color: COLORS.textSecondary, fontSize: '14px' }}>
+                    Choose from 4 optimized yield strategies
+                  </p>
+                </div>
+                <div
+                  style={{
+                    backgroundColor: COLORS.bg,
+                    padding: '24px',
+                    borderRadius: '8px',
+                    border: `1px solid ${COLORS.border}`,
+                  }}
+                >
+                  <Shield style={{ margin: '0 auto 12px' }} color={COLORS.primary} size={32} />
+                  <h3
+                    style={{
+                      fontWeight: 500,
+                      fontSize: '18px',
+                      marginBottom: '8px',
+                      color: COLORS.textPrimary,
+                    }}
+                  >
+                    Auto Risk Management
+                  </h3>
+                  <p style={{ color: COLORS.textSecondary, fontSize: '14px' }}>
+                    Smart health factor monitoring & rebalancing
+                  </p>
+                </div>
+              </div>
             </div>
           ) : (
             <>
@@ -64,18 +136,59 @@ export default function Home() {
               <div
                 style={{
                   backgroundColor: COLORS.cardBg,
-                  padding: '24px',
                   borderRadius: '8px',
+                  padding: '24px',
                   border: `1px solid ${COLORS.border}`,
                 }}
               >
-                <h2 style={{ fontSize: '24px', marginBottom: '24px' }}>Strategy Marketplace</h2>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: '24px',
+                    flexWrap: 'wrap',
+                    gap: '16px',
+                  }}
+                >
+                  <h2
+                    style={{
+                      fontSize: '24px',
+                      fontWeight: 500,
+                      color: COLORS.textPrimary,
+                      margin: 0,
+                    }}
+                  >
+                    Strategy Marketplace
+                  </h2>
+                  <span
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: `${COLORS.primary}33`,
+                      color: COLORS.primary,
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                    }}
+                  >
+                    Live APR
+                  </span>
+                </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {STRATEGIES.map((strategy) => (
-                    <StrategyCard key={strategy.id} strategy={strategy} />
+                    <StrategyCard
+                      key={strategy.id}
+                      strategy={strategy}
+                      isActive={strategy.name === userPosition.activeStrategy}
+                    />
                   ))}
                 </div>
               </div>
+
+              <DepositForm
+                balance={userPosition.balance}
+                onSuccess={() => refetchPosition()}
+              />
             </>
           )}
         </div>
@@ -85,14 +198,22 @@ export default function Home() {
         style={{
           borderTop: `1px solid ${COLORS.border}`,
           marginTop: '64px',
-          padding: '32px 24px',
-          textAlign: 'center',
-          color: COLORS.textSecondary,
-          fontSize: '14px',
+          padding: '32px 0',
         }}
       >
-        <p>Contract: 0x... • HyperEVM Testnet (Chain ID: 998)</p>
-        <p style={{ marginTop: '8px' }}>Built for HLH Seoul 2025 • Powered by HypurrFi</p>
+        <div
+          style={{
+            maxWidth: '1280px',
+            margin: '0 auto',
+            padding: '0 24px',
+            textAlign: 'center',
+            color: COLORS.textSecondary,
+            fontSize: '14px',
+          }}
+        >
+          <p>Contract: 0x... • HyperEVM Testnet (Chain ID: 998)</p>
+          <p style={{ marginTop: '8px' }}>Built for HLH Seoul 2025 • Powered by HypurrFi</p>
+        </div>
       </footer>
     </div>
   );

@@ -1,12 +1,10 @@
 'use client';
 
-import { Wallet } from 'lucide-react';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 const COLORS = {
   bg: '#0a1f1f',
   border: '#1a3a3a',
-  primary: '#00d4aa',
-  primaryHover: '#00bfa0',
   textPrimary: '#ffffff',
   textSecondary: '#8b9d9d',
 };
@@ -30,22 +28,7 @@ export default function Header() {
               Multi-Strategy Yield Marketplace
             </p>
           </div>
-          <button style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            backgroundColor: COLORS.primary,
-            color: COLORS.bg,
-            padding: '10px 24px',
-            borderRadius: '6px',
-            fontWeight: 500,
-            border: 'none',
-            cursor: 'pointer',
-            transition: 'background-color 0.2s'
-          }}>
-            <Wallet size={18} />
-            Connect
-          </button>
+          <ConnectButton />
         </div>
       </div>
     </header>

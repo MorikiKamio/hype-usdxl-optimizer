@@ -98,3 +98,4 @@ Each sponsor will post their **specific task and bounty** in the `/tasks/` folde
 HyperEVM is your canvas.
 Build fast, think bold, and **push the boundaries of on-chain coordination**.
 Good luck, and see you on the leaderboard.
+Updated

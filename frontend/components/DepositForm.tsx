@@ -1,164 +1,274 @@
 'use client';
 
-import { FormEvent, useMemo, useState } from 'react';
-import { Strategy } from '@/lib/types';
+import { useState } from 'react';
+import { Zap, ChevronDown } from 'lucide-react';
+import { STRATEGIES } from '@/lib/types';
+import { useDeposit, useApprove } from '@/hooks/useContract';
+import { StrategyType } from '@/lib/contracts';
 
 const COLORS = {
+  bg: '#0a1f1f',
   cardBg: '#0f2929',
   border: '#1a3a3a',
   primary: '#00d4aa',
   primaryHover: '#00bfa0',
   textPrimary: '#ffffff',
   textSecondary: '#8b9d9d',
-  inputBg: '#0a1f1f',
 };
 
 interface DepositFormProps {
-  isConnected: boolean;
-  selectedStrategy?: Strategy | null;
-  onDeposit?: (amount: number) => void;
-  onWithdraw?: (amount: number) => void;
+  balance: number;
+  onSuccess?: () => void;
 }
 
-export default function DepositForm({
-  isConnected,
-  selectedStrategy,
-  onDeposit,
-  onWithdraw,
-}: DepositFormProps) {
+export default function DepositForm({ balance, onSuccess }: DepositFormProps) {
   const [amount, setAmount] = useState('');
+  const [selectedStrategy, setSelectedStrategy] = useState('auto');
 
-  const isValidAmount = useMemo(() => {
-    const value = Number(amount);
-    return isFinite(value) && value > 0;
-  }, [amount]);
+  const { approve, isPending: isApproving, isSuccess: isApproved } = useApprove();
+  const {
+    depositAuto,
+    depositToStrategy,
+    isPending,
+    isConfirming,
+    isSuccess,
+    error,
+  } = useDeposit();
 
-  const handleSubmit = (evt: FormEvent<HTMLFormElement>) => {
-    evt.preventDefault();
-    if (!isValidAmount) return;
-
-    const value = Number(amount);
-    onDeposit?.(value);
-    setAmount('');
+  const handleApprove = async () => {
+    try {
+      await approve(amount);
+    } catch (err) {
+      console.error('Approve failed:', err);
+      alert('Approval failed. Please try again.');
+    }
   };
 
-  const handleWithdraw = () => {
-    if (!isValidAmount) return;
-    onWithdraw?.(Number(amount));
-    setAmount('');
+  const handleDeposit = async () => {
+    if (!amount || parseFloat(amount) <= 0) {
+      alert('Please enter a valid amount');
+      return;
+    }
+
+    try {
+      if (selectedStrategy === 'auto') {
+        await depositAuto(amount);
+      } else {
+        const strategyIndex = STRATEGIES.findIndex((s) => s.id === selectedStrategy);
+        if (strategyIndex === -1) {
+          throw new Error('Invalid strategy');
+        }
+        await depositToStrategy(amount, strategyIndex as StrategyType);
+      }
+
+      // Success
+      if (isSuccess && onSuccess) {
+        onSuccess();
+      }
+    } catch (err: any) {
+      console.error('Deposit failed:', err);
+      alert(err?.message || 'Deposit failed. Please try again.');
+    }
   };
 
-  if (!isConnected) {
-    return (
-      <div
-        style={{
-          backgroundColor: COLORS.cardBg,
-          border: `1px solid ${COLORS.border}`,
-          borderRadius: '8px',
-          padding: '24px',
-          color: COLORS.textSecondary,
-          textAlign: 'center',
-        }}
-      >
-        Connect your wallet to deposit into strategies.
-      </div>
-    );
-  }
+  const isLoading = isPending || isConfirming || isApproving;
 
   return (
-    <form
-      onSubmit={handleSubmit}
+    <div
       style={{
         backgroundColor: COLORS.cardBg,
-        border: `1px solid ${COLORS.border}`,
         borderRadius: '8px',
         padding: '24px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '16px',
+        border: `1px solid ${COLORS.border}`,
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <h2
+        style={{
+          fontSize: '20px',
+          fontWeight: 500,
+          marginBottom: '24px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          color: COLORS.textPrimary,
+        }}
+      >
+        <Zap color={COLORS.primary} size={20} />
+        Deposit & Optimize
+      </h2>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {/* Amount Input */}
         <div>
-          <p style={{ margin: 0, fontSize: '14px', color: COLORS.textSecondary }}>
-            Selected Strategy
-          </p>
-          <p style={{ margin: '4px 0 0', color: COLORS.textPrimary, fontWeight: 500 }}>
-            {selectedStrategy ? selectedStrategy.name : 'None'}
+          <label
+            style={{
+              display: 'block',
+              fontSize: '14px',
+              color: COLORS.textSecondary,
+              marginBottom: '8px',
+            }}
+          >
+            Amount
+          </label>
+          <div style={{ position: 'relative' }}>
+            <input
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="0.00"
+              disabled={isLoading}
+              style={{
+                width: '100%',
+                backgroundColor: COLORS.bg,
+                border: `1px solid ${COLORS.border}`,
+                borderRadius: '6px',
+                padding: '10px 16px',
+                color: COLORS.textPrimary,
+                fontSize: '16px',
+                outline: 'none',
+              }}
+            />
+            <span
+              style={{
+                position: 'absolute',
+                right: '16px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: COLORS.textSecondary,
+                fontWeight: 500,
+                fontSize: '14px',
+              }}
+            >
+              HYPE
+            </span>
+          </div>
+          <p style={{ fontSize: '14px', color: COLORS.textSecondary, marginTop: '4px' }}>
+            Available: {balance.toLocaleString()} HYPE
           </p>
         </div>
-        {selectedStrategy && (
-          <p style={{ margin: 0, color: COLORS.textSecondary, fontSize: '13px' }}>
-            Min Deposit:{' '}
-            <span style={{ color: COLORS.textPrimary }}>
-              {selectedStrategy.minDeposit.toLocaleString()} HYPE
-            </span>
-          </p>
+
+        {/* Strategy Selection */}
+        <div>
+          <label
+            style={{
+              display: 'block',
+              fontSize: '14px',
+              color: COLORS.textSecondary,
+              marginBottom: '8px',
+            }}
+          >
+            Strategy
+          </label>
+          <div style={{ position: 'relative' }}>
+            <select
+              value={selectedStrategy}
+              onChange={(e) => setSelectedStrategy(e.target.value)}
+              disabled={isLoading}
+              style={{
+                width: '100%',
+                backgroundColor: COLORS.bg,
+                border: `1px solid ${COLORS.border}`,
+                borderRadius: '6px',
+                padding: '10px 16px',
+                color: COLORS.textPrimary,
+                fontSize: '16px',
+                outline: 'none',
+                cursor: 'pointer',
+                appearance: 'none',
+              }}
+            >
+              <option value="auto">Auto-Select (Highest APR)</option>
+              {STRATEGIES.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name} - {s.apr}% APR
+                </option>
+              ))}
+            </select>
+            <ChevronDown
+              style={{
+                position: 'absolute',
+                right: '16px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                pointerEvents: 'none',
+              }}
+              color={COLORS.textSecondary}
+              size={18}
+            />
+          </div>
+        </div>
+
+        {/* Buttons */}
+        {!isApproved ? (
+          <button
+            onClick={handleApprove}
+            disabled={isLoading || !amount || parseFloat(amount) <= 0}
+            style={{
+              width: '100%',
+              backgroundColor: COLORS.primary,
+              color: COLORS.bg,
+              padding: '12px 24px',
+              borderRadius: '6px',
+              fontWeight: 500,
+              border: 'none',
+              cursor: isLoading || !amount ? 'not-allowed' : 'pointer',
+              opacity: isLoading || !amount ? 0.5 : 1,
+            }}
+          >
+            {isApproving ? 'Approving...' : 'Approve HYPE'}
+          </button>
+        ) : (
+          <button
+            onClick={handleDeposit}
+            disabled={isLoading || !amount || parseFloat(amount) <= 0}
+            style={{
+              width: '100%',
+              backgroundColor: COLORS.primary,
+              color: COLORS.bg,
+              padding: '12px 24px',
+              borderRadius: '6px',
+              fontWeight: 500,
+              border: 'none',
+              cursor: isLoading || !amount ? 'not-allowed' : 'pointer',
+              opacity: isLoading || !amount ? 0.5 : 1,
+            }}
+          >
+            {isPending && 'Waiting for approval...'}
+            {isConfirming && 'Confirming...'}
+            {!isPending && !isConfirming && 'Deposit'}
+          </button>
+        )}
+
+        {isSuccess && (
+          <div
+            style={{
+              padding: '12px',
+              backgroundColor: `${COLORS.primary}33`,
+              borderRadius: '6px',
+              color: COLORS.primary,
+              fontSize: '14px',
+              textAlign: 'center',
+            }}
+          >
+            ✓ Deposit successful!
+          </div>
+        )}
+
+        {error && (
+          <div
+            style={{
+              padding: '12px',
+              backgroundColor: '#ff444433',
+              borderRadius: '6px',
+              color: '#ff4444',
+              fontSize: '14px',
+              textAlign: 'center',
+            }}
+          >
+            Error: {error.message}
+          </div>
         )}
       </div>
-
-      <label style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <span style={{ fontSize: '14px', color: COLORS.textSecondary }}>Amount (HYPE)</span>
-        <input
-          type="number"
-          min="0"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="0.0"
-          style={{
-            padding: '14px 16px',
-            borderRadius: '6px',
-            border: `1px solid ${COLORS.border}`,
-            backgroundColor: COLORS.inputBg,
-            color: COLORS.textPrimary,
-            fontSize: '18px',
-            outline: 'none',
-          }}
-        />
-      </label>
-
-      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-        <button
-          type="submit"
-          disabled={!isValidAmount}
-          style={{
-            flex: 1,
-            minWidth: '180px',
-            padding: '12px 18px',
-            borderRadius: '6px',
-            border: 'none',
-            cursor: isValidAmount ? 'pointer' : 'not-allowed',
-            backgroundColor: COLORS.primary,
-            color: COLORS.cardBg,
-            fontWeight: 600,
-            fontSize: '15px',
-            transition: 'opacity 0.2s',
-            opacity: isValidAmount ? 1 : 0.5,
-          }}
-        >
-          Deposit
-        </button>
-        <button
-          type="button"
-          onClick={handleWithdraw}
-          disabled={!isValidAmount}
-          style={{
-            flex: 1,
-            minWidth: '180px',
-            padding: '12px 18px',
-            borderRadius: '6px',
-            border: `1px solid ${COLORS.border}`,
-            backgroundColor: 'transparent',
-            color: COLORS.textPrimary,
-            fontWeight: 600,
-            fontSize: '15px',
-            cursor: isValidAmount ? 'pointer' : 'not-allowed',
-            opacity: isValidAmount ? 1 : 0.5,
-          }}
-        >
-          Withdraw
-        </button>
-      </div>
-    </form>
+    </div>
   );
 }
