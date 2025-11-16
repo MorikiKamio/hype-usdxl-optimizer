@@ -113,7 +113,3 @@ Deploy script: `contract/script/DeployLite.s.sol` (Forge). Broadcast artifacts s
 ## 📜 License
 
 MIT — see `LICENSE`.
-
-## 🙌 Credits
-
-Built for the HLH Seoul 2025 / HypurrFi bounty track by @morikikamio. Huge thanks to the HypurrFi and HyperEVM teams for providing the production infrastructure.
