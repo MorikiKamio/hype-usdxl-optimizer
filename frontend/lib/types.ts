@@ -51,7 +51,7 @@ export const STRATEGIES: Strategy[] = [
     risk: 'Low',
     description: 'Direct validator delegation with fee rebates',
     color: 'blue',
-    minDeposit: 500_000,
+    minDeposit: 100,
   },
   {
     id: 'USDXL_STABILITY',
