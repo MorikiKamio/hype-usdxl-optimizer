@@ -1,9 +1,14 @@
 import { Address } from 'viem';
 
-// Contract Addresses (モック - デプロイ後に更新)
-export const OPTIMIZER_ADDRESS: Address = '0x0000000000000000000000000000000000000000';
-export const MOCK_USDXL_ADDRESS: Address = '0x0000000000000000000000000000000000000000';
-export const HYPE_TOKEN_ADDRESS: Address = '0x5555555555555555555555555555555555555555';
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+
+export const OPTIMIZER_ADDRESS = (process.env.NEXT_PUBLIC_OPTIMIZER_ADDRESS ||
+  ZERO_ADDRESS) as Address;
+export const MOCK_USDXL_ADDRESS = (process.env.NEXT_PUBLIC_MOCK_USDXL_ADDRESS ||
+  ZERO_ADDRESS) as Address;
+export const HYPE_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_WHYPE_ADDRESS ||
+  process.env.NEXT_PUBLIC_HYPE_TOKEN ||
+  ZERO_ADDRESS) as Address;
 
 // Simplified ABI for frontend
 export const OPTIMIZER_ABI = [

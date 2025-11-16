@@ -9,6 +9,7 @@ import StrategyCard from '@/components/StrategyCard';
 import DepositForm from '@/components/DepositForm';
 import { STRATEGIES } from '@/lib/types';
 import { useUserPosition, useHYPEBalance } from '@/hooks/useContract';
+import { useNativeHYPEBalance } from '@/hooks/useNativeHYPE';
 
 const COLORS = {
   bg: '#0a1f1f',
@@ -23,21 +24,22 @@ const COLORS = {
 export default function Home() {
   const { address, isConnected } = useAccount();
   const { position, refetch: refetchPosition } = useUserPosition(address);
-  const { balance } = useHYPEBalance(address);
+  const { balance: whypeBalance, refetch: refetchWHYPE } = useHYPEBalance(address);
+  const { balance: nativeBalance, refetch: refetchNative } = useNativeHYPEBalance(address);
   const [selectedStrategyId, setSelectedStrategyId] = useState<string>('auto');
   const depositFormRef = useRef<HTMLDivElement>(null);
 
   // Construct user position for display
   const userPosition = position
     ? {
-        balance,
+        balance: nativeBalance,
         deposited: position.deposited,
         currentAPR: position.currentAPR,
         healthFactor: position.healthFactor,
         activeStrategy: position.activeStrategy,
       }
     : {
-        balance,
+        balance: nativeBalance,
         deposited: 0,
         currentAPR: 0,
         healthFactor: 0,
@@ -230,10 +232,15 @@ export default function Home() {
 
               <div ref={depositFormRef}>
                 <DepositForm
-                  balance={userPosition.balance}
+                  balance={nativeBalance}
+                  whypeBalance={whypeBalance}
                   selectedStrategy={selectedStrategyId}
                   onStrategyChange={setSelectedStrategyId}
-                  onSuccess={() => refetchPosition()}
+                  onSuccess={() => {
+                    refetchPosition();
+                    refetchNative();
+                    refetchWHYPE();
+                  }}
                 />
               </div>
             </>

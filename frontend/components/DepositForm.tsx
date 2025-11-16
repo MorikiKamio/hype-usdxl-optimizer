@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Zap, ChevronDown } from 'lucide-react';
+import { Zap, ChevronDown, ArrowRightLeft } from 'lucide-react';
 import { STRATEGIES } from '@/lib/types';
 import { useDeposit, useApprove } from '@/hooks/useContract';
+import { useWrapHYPE } from '@/hooks/useWrapHYPE';
 import { StrategyType } from '@/lib/contracts';
 
 const COLORS = {
@@ -18,6 +19,7 @@ const COLORS = {
 
 interface DepositFormProps {
   balance: number;
+  whypeBalance?: number;
   selectedStrategy?: string;
   onStrategyChange?: (strategyId: string) => void;
   onSuccess?: () => void;
@@ -25,24 +27,50 @@ interface DepositFormProps {
 
 export default function DepositForm({
   balance,
+  whypeBalance = 0,
   selectedStrategy = 'auto',
   onStrategyChange,
   onSuccess,
 }: DepositFormProps) {
   const [amount, setAmount] = useState('');
   const [localStrategy, setLocalStrategy] = useState(selectedStrategy);
+  const [needsWrap, setNeedsWrap] = useState(false);
 
   useEffect(() => {
     setLocalStrategy(selectedStrategy);
   }, [selectedStrategy]);
 
+  useEffect(() => {
+    const amountNum = parseFloat(amount) || 0;
+    setNeedsWrap(amountNum > whypeBalance && amountNum <= balance);
+  }, [amount, balance, whypeBalance]);
+
+  const { wrap, isPending: isWrapping, isSuccess: wrapSuccess } = useWrapHYPE();
   const { approve, isPending: isApproving, isSuccess: isApproved } = useApprove();
   const { depositAuto, depositToStrategy, isPending, isConfirming, isSuccess, error } = useDeposit();
 
   const handleStrategyChange = (newStrategy: string) => {
     setLocalStrategy(newStrategy);
-    if (onStrategyChange) {
-      onStrategyChange(newStrategy);
+    onStrategyChange?.(newStrategy);
+  };
+
+  const handleWrap = async () => {
+    const amountNum = parseFloat(amount);
+    if (!amount || amountNum <= 0) {
+      alert('Please enter a valid amount');
+      return;
+    }
+
+    try {
+      const wrapAmount = Math.min(Math.max(amountNum - whypeBalance, 0), balance);
+      if (wrapAmount <= 0) {
+        alert('Nothing to wrap');
+        return;
+      }
+      await wrap(wrapAmount.toString());
+    } catch (err) {
+      console.error('Wrap failed:', err);
+      alert('Wrapping failed. Please try again.');
     }
   };
 
@@ -77,15 +105,18 @@ export default function DepositForm({
       }
     } catch (err) {
       console.error('Deposit failed:', err);
-      const message = err instanceof Error ? err.message : 'Deposit failed. Please try again.';
+      const message =
+        err instanceof Error ? err.message : 'Deposit failed. Please try again.';
       alert(message);
     }
   };
 
-  const isLoading = isPending || isConfirming || isApproving;
+  const isLoading = isPending || isConfirming || isApproving || isWrapping;
 
   const selectedStrategyDetails =
     localStrategy === 'auto' ? null : STRATEGIES.find((s) => s.id === localStrategy);
+
+  const needsWrapAction = needsWrap && !wrapSuccess;
 
   return (
     <div
@@ -176,9 +207,46 @@ export default function DepositForm({
               HYPE
             </span>
           </div>
-          <p style={{ fontSize: '14px', color: COLORS.textSecondary, marginTop: '4px' }}>
-            Available: {balance.toLocaleString()} HYPE
-          </p>
+
+          <div style={{ marginTop: '8px', fontSize: '13px' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                color: COLORS.textSecondary,
+              }}
+            >
+              <span>Native HYPE:</span>
+              <span style={{ fontWeight: 500 }}>{balance.toFixed(4)} HYPE</span>
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                color: COLORS.textSecondary,
+                marginTop: '4px',
+              }}
+            >
+              <span>Wrapped HYPE (WHYPE):</span>
+              <span style={{ fontWeight: 500 }}>{whypeBalance.toFixed(4)} WHYPE</span>
+            </div>
+          </div>
+
+          {needsWrapAction && (
+            <div
+              style={{
+                marginTop: '8px',
+                padding: '8px 12px',
+                backgroundColor: '#ff880022',
+                border: '1px solid #ff8800',
+                borderRadius: '6px',
+                fontSize: '12px',
+                color: '#ff8800',
+              }}
+            >
+              ⚠️ You need to wrap {(parseFloat(amount) - whypeBalance).toFixed(4)} HYPE first
+            </div>
+          )}
         </div>
 
         <div>
@@ -231,7 +299,33 @@ export default function DepositForm({
           </div>
         </div>
 
-        {!isApproved ? (
+        {needsWrapAction && (
+          <button
+            onClick={handleWrap}
+            disabled={isLoading || !amount || parseFloat(amount) <= 0}
+            style={{
+              width: '100%',
+              backgroundColor: '#ff8800',
+              color: COLORS.bg,
+              padding: '12px 24px',
+              borderRadius: '6px',
+              fontWeight: 500,
+              border: 'none',
+              cursor: isLoading || !amount ? 'not-allowed' : 'pointer',
+              opacity: isLoading || !amount ? 0.5 : 1,
+              fontSize: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+            }}
+          >
+            <ArrowRightLeft size={18} />
+            {isWrapping ? 'Wrapping...' : `Wrap ${(parseFloat(amount) - whypeBalance).toFixed(4)} HYPE`}
+          </button>
+        )}
+
+        {!needsWrapAction && !isApproved && (
           <button
             onClick={handleApprove}
             disabled={isLoading || !amount || parseFloat(amount) <= 0}
@@ -248,9 +342,11 @@ export default function DepositForm({
               fontSize: '16px',
             }}
           >
-            {isApproving ? 'Approving...' : 'Approve HYPE'}
+            {isApproving ? 'Approving...' : 'Approve WHYPE'}
           </button>
-        ) : (
+        )}
+
+        {!needsWrapAction && isApproved && (
           <button
             onClick={handleDeposit}
             disabled={isLoading || !amount || parseFloat(amount) <= 0}
@@ -285,6 +381,21 @@ export default function DepositForm({
             }}
           >
             ✓ Deposit successful!
+          </div>
+        )}
+
+        {wrapSuccess && !isSuccess && (
+          <div
+            style={{
+              padding: '12px',
+              backgroundColor: '#ff880033',
+              borderRadius: '6px',
+              color: '#ff8800',
+              fontSize: '14px',
+              textAlign: 'center',
+            }}
+          >
+            ✓ Wrapped successfully! Approve WHYPE to continue.
           </div>
         )}
 

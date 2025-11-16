@@ -52,7 +52,7 @@ export function useUserPosition(address: Address | undefined) {
 
 // Get HYPE token balance
 export function useHYPEBalance(address: Address | undefined) {
-  const { data, isLoading } = useReadContract({
+  const { data, isLoading, refetch } = useReadContract({
     address: HYPE_TOKEN_ADDRESS,
     abi: ERC20_ABI,
     functionName: 'balanceOf',
@@ -67,6 +67,7 @@ export function useHYPEBalance(address: Address | undefined) {
   return {
     balance: data ? Number(formatEther(data)) : 0,
     isLoading,
+    refetch,
   };
 }
 
