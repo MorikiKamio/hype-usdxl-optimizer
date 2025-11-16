@@ -65,9 +65,10 @@ export default function DepositForm({ balance, onSuccess }: DepositFormProps) {
       if (isSuccess && onSuccess) {
         onSuccess();
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Deposit failed:', err);
-      alert(err?.message || 'Deposit failed. Please try again.');
+      const message = err instanceof Error ? err.message : 'Deposit failed. Please try again.';
+      alert(message);
     }
   };
 

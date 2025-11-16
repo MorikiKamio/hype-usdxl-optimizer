@@ -3,7 +3,7 @@ import { Address } from 'viem';
 // Contract Addresses (モック - デプロイ後に更新)
 export const OPTIMIZER_ADDRESS: Address = '0x0000000000000000000000000000000000000000';
 export const MOCK_USDXL_ADDRESS: Address = '0x0000000000000000000000000000000000000000';
-export const HYPE_TOKEN_ADDRESS: Address = '0x0000000000000000000000000000000000000000';
+export const HYPE_TOKEN_ADDRESS: Address = '0x5555555555555555555555555555555555555555';
 
 // Simplified ABI for frontend
 export const OPTIMIZER_ABI = [

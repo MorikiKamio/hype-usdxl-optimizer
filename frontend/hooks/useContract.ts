@@ -1,18 +1,15 @@
 'use client';
 
 import {
+  useAccount,
   useReadContract,
   useWriteContract,
   useWaitForTransactionReceipt,
 } from 'wagmi';
 import { parseEther, formatEther, Address } from 'viem';
-import {
-  OPTIMIZER_ADDRESS,
-  OPTIMIZER_ABI,
-  ERC20_ABI,
-  HYPE_TOKEN_ADDRESS,
-} from '@/lib/contracts';
+import { OPTIMIZER_ADDRESS, OPTIMIZER_ABI, ERC20_ABI, HYPE_TOKEN_ADDRESS } from '@/lib/contracts';
 import { STRATEGIES } from '@/lib/types';
+import { hyperliquidTestnet } from '@/app/providers';
 
 // Get user position from contract
 export function useUserPosition(address: Address | undefined) {
@@ -79,16 +76,21 @@ export function useDeposit() {
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash,
   });
+  const { address } = useAccount();
 
   const depositAuto = async (amount: string) => {
     if (!amount || parseFloat(amount) <= 0) {
       throw new Error('Invalid amount');
     }
 
+    if (!address) throw new Error('Wallet not connected');
+
     await writeContract({
       address: OPTIMIZER_ADDRESS,
       abi: OPTIMIZER_ABI,
       functionName: 'depositAuto',
+      chain: hyperliquidTestnet,
+      account: address,
       args: [parseEther(amount)],
     });
   };
@@ -98,10 +100,14 @@ export function useDeposit() {
       throw new Error('Invalid amount');
     }
 
+    if (!address) throw new Error('Wallet not connected');
+
     await writeContract({
       address: OPTIMIZER_ADDRESS,
       abi: OPTIMIZER_ABI,
       functionName: 'depositToStrategy',
+      chain: hyperliquidTestnet,
+      account: address,
       args: [parseEther(amount), strategyIndex],
     });
   };
@@ -123,12 +129,17 @@ export function useApprove() {
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash,
   });
+  const { address } = useAccount();
 
   const approve = async (amount: string) => {
+    if (!address) throw new Error('Wallet not connected');
+
     await writeContract({
       address: HYPE_TOKEN_ADDRESS,
       abi: ERC20_ABI,
       functionName: 'approve',
+      chain: hyperliquidTestnet,
+      account: address,
       args: [OPTIMIZER_ADDRESS, parseEther(amount)],
     });
   };
