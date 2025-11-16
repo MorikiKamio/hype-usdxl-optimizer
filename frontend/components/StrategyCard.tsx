@@ -207,7 +207,7 @@ export default function StrategyCard({
             TVL:{' '}
             {typeof liveTvl === 'number'
               ? `${liveTvl.toFixed(2)} WHYPE`
-              : `$${(strategy.tvl / 1_000_000).toFixed(1)}M`}
+              : 'N/A'}
           </span>
         </div>
         {targetLtv && (

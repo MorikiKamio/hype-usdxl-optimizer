@@ -8,11 +8,12 @@ import PositionCard from '@/components/PositionCard';
 import StrategyCard from '@/components/StrategyCard';
 import DepositForm from '@/components/DepositForm';
 import { STRATEGIES } from '@/lib/types';
-import { useUserPosition, useHYPEBalance } from '@/hooks/useContract';
+import { useUserPosition, useHYPEBalance, useUSDXLBalance } from '@/hooks/useContract';
 import { useNativeHYPEBalance } from '@/hooks/useNativeHYPE';
 import { useHypurrFiRates } from '@/hooks/useHypurrFiRates';
 import { useOptimizerStats } from '@/hooks/useOptimizerStats';
 import { useHip3Position } from '@/hooks/useHip3';
+import { useUsdxlPosition } from '@/hooks/useUsdxl';
 
 function deriveStrategyApr(
   strategyId: string,
@@ -49,12 +50,14 @@ export default function Home() {
   const { address, isConnected } = useAccount();
   const { position, refetch: refetchPosition } = useUserPosition(address);
   const { balance: whypeBalance, refetch: refetchWHYPE } = useHYPEBalance(address);
+  const { balance: usdxlWalletBalance } = useUSDXLBalance(address);
   const { balance: nativeBalance, refetch: refetchNative } = useNativeHYPEBalance(address);
   const [selectedStrategyId, setSelectedStrategyId] = useState<string>('auto');
   const depositFormRef = useRef<HTMLDivElement>(null);
   const { supplyAPR, borrowAPR, isLoading: aprLoading } = useHypurrFiRates();
   const optimizerStats = useOptimizerStats();
   const hip3Position = useHip3Position(address);
+  const usdxlPosition = useUsdxlPosition(address);
 
   const strategyAprs = useMemo(() => {
     const map: Record<string, number | null> = {};
@@ -79,6 +82,7 @@ export default function Home() {
         debt: position.debt,
         ltv: position.ltv,
         hip3Deposited: hip3Position.deposited,
+        usdxlDeposited: usdxlPosition.deposited,
       }
     : {
         balance: nativeBalance,
@@ -90,6 +94,7 @@ export default function Home() {
         debt: 0,
         ltv: 0,
         hip3Deposited: hip3Position.deposited,
+        usdxlDeposited: usdxlPosition.deposited,
       };
 
   const playSelectSound = () => {
@@ -271,6 +276,7 @@ export default function Home() {
                   {STRATEGIES.map((strategy) => {
                     const isLeverage = strategy.id === 'HYPE_LEVERAGE';
                     const isHip3 = strategy.id === 'CORE_WRITER_HIP3';
+                    const isUsdxl = strategy.id === 'USDXL_STABILITY';
                     return (
                       <StrategyCard
                         key={strategy.id}
@@ -283,6 +289,8 @@ export default function Home() {
                             ? optimizerStats.tvl
                             : isHip3
                             ? optimizerStats.hip3Tvl
+                            : isUsdxl
+                            ? optimizerStats.usdxlTvl
                             : null
                         }
                         targetLtv={isLeverage ? optimizerStats.targetLtv : null}
@@ -293,6 +301,8 @@ export default function Home() {
                             ? optimizerStats.hip3Validator
                               ? `Delegating to ${optimizerStats.hip3Validator.slice(0, 6)}...${optimizerStats.hip3Validator.slice(-4)}`
                               : 'Validator not configured'
+                            : isUsdxl
+                            ? 'Deposit USDXL directly'
                             : 'Coming soon'
                         }
                         onSelect={() => handleStrategySelect(strategy.id)}
@@ -310,6 +320,8 @@ export default function Home() {
                   hip3Balance={hip3Position.deposited}
                   hip3MinDeposit={hip3Position.minDeposit}
                   hip3Validator={hip3Position.validator}
+                  usdxlWalletBalance={usdxlWalletBalance}
+                  usdxlDeposited={usdxlPosition.deposited}
                   selectedStrategy={selectedStrategyId}
                   onStrategyChange={setSelectedStrategyId}
                   onSuccess={() => {
@@ -317,6 +329,7 @@ export default function Home() {
                     refetchNative();
                     refetchWHYPE();
                     hip3Position.refetch();
+                    usdxlPosition.refetch();
                   }}
                 />
               </div>

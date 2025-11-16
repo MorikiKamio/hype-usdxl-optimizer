@@ -7,6 +7,11 @@ import { useDeposit, useApprove, useWithdraw } from '@/hooks/useContract';
 import { useWrapHYPE } from '@/hooks/useWrapHYPE';
 import { StrategyType } from '@/lib/contracts';
 import { useHip3DepositAction, useHip3WithdrawAction } from '@/hooks/useHip3';
+import {
+  useUsdxlDepositAction,
+  useUsdxlWithdrawAction,
+  useUsdxlApprove,
+} from '@/hooks/useUsdxl';
 
 const COLORS = {
   bg: '#0a1f1f',
@@ -25,6 +30,8 @@ interface DepositFormProps {
   hip3Balance?: number;
   hip3MinDeposit?: number;
   hip3Validator?: string;
+  usdxlWalletBalance?: number;
+  usdxlDeposited?: number;
   selectedStrategy?: string;
   onStrategyChange?: (strategyId: string) => void;
   onSuccess?: () => void;
@@ -37,6 +44,8 @@ export default function DepositForm({
   hip3Balance = 0,
   hip3MinDeposit = 0,
   hip3Validator,
+  usdxlWalletBalance = 0,
+  usdxlDeposited = 0,
   selectedStrategy = 'auto',
   onStrategyChange,
   onSuccess,
@@ -44,10 +53,12 @@ export default function DepositForm({
   const [amount, setAmount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [hip3WithdrawAmount, setHip3WithdrawAmount] = useState('');
+  const [usdxlWithdrawAmount, setUsdxlWithdrawAmount] = useState('');
   const [localStrategy, setLocalStrategy] = useState(selectedStrategy);
   const [needsWrap, setNeedsWrap] = useState(false);
 
   const isHip3Selected = localStrategy === 'CORE_WRITER_HIP3';
+  const isUsdxlSelected = localStrategy === 'USDXL_STABILITY';
 
   useEffect(() => {
     setLocalStrategy(selectedStrategy);
@@ -55,12 +66,12 @@ export default function DepositForm({
 
   useEffect(() => {
     const amountNum = parseFloat(amount) || 0;
-    if (isHip3Selected) {
+    if (isHip3Selected || isUsdxlSelected) {
       setNeedsWrap(false);
     } else {
       setNeedsWrap(amountNum > whypeBalance && amountNum <= balance);
     }
-  }, [amount, balance, whypeBalance, isHip3Selected]);
+  }, [amount, balance, whypeBalance, isHip3Selected, isUsdxlSelected]);
 
   const { wrap, isPending: isWrapping, isSuccess: wrapSuccess } = useWrapHYPE();
   const { approve, isPending: isApproving, isSuccess: isApproved } = useApprove();
@@ -74,6 +85,9 @@ export default function DepositForm({
   } = useWithdraw();
   const hip3Deposit = useHip3DepositAction();
   const hip3Withdraw = useHip3WithdrawAction();
+  const usdxlApprove = useUsdxlApprove();
+  const usdxlDeposit = useUsdxlDepositAction();
+  const usdxlWithdraw = useUsdxlWithdrawAction();
 
   const handleStrategyChange = (newStrategy: string) => {
     setLocalStrategy(newStrategy);
@@ -126,6 +140,8 @@ export default function DepositForm({
           return;
         }
         await hip3Deposit.action(amount);
+      } else if (isUsdxlSelected) {
+        await usdxlDeposit.action(amount);
       } else if (localStrategy === 'auto') {
         await depositAuto(amount);
       } else {
@@ -136,9 +152,7 @@ export default function DepositForm({
         await depositToStrategy(amount, strategyIndex as StrategyType);
       }
 
-      if (onSuccess) {
-        onSuccess();
-      }
+      onSuccess?.();
     } catch (err) {
       console.error('Deposit failed:', err);
       const message =
@@ -194,9 +208,32 @@ export default function DepositForm({
     }
   };
 
+  const handleUsdxlWithdraw = async () => {
+    if (!usdxlWithdrawAmount || parseFloat(usdxlWithdrawAmount) <= 0) {
+      alert('Please enter a valid amount');
+      return;
+    }
+    if (parseFloat(usdxlWithdrawAmount) > usdxlDeposited) {
+      alert('Amount exceeds USDXL balance');
+      return;
+    }
+
+    try {
+      await usdxlWithdraw.action(usdxlWithdrawAmount);
+      setUsdxlWithdrawAmount('');
+      onSuccess?.();
+    } catch (err) {
+      console.error('USDXL withdraw failed:', err);
+      const message =
+        err instanceof Error ? err.message : 'Withdraw failed. Please try again.';
+      alert(message);
+    }
+  };
+
   const isLeverageLoading = isPending || isConfirming || isApproving || isWrapping;
   const isHip3Loading = hip3Deposit.isPending || hip3Deposit.isConfirming;
-  const disableInputs = isHip3Selected ? isHip3Loading : isLeverageLoading;
+  const isUsdxlLoading = usdxlDeposit.isPending || usdxlDeposit.isConfirming;
+  const disableInputs = isHip3Selected ? isHip3Loading : isUsdxlSelected ? isUsdxlLoading : isLeverageLoading;
   const isLoading = isLeverageLoading;
 
   const selectedStrategyDetails =
@@ -290,7 +327,7 @@ export default function DepositForm({
                 fontSize: '14px',
               }}
             >
-              HYPE
+              {isUsdxlSelected ? 'USDXL' : 'HYPE'}
             </span>
           </div>
 
@@ -316,6 +353,19 @@ export default function DepositForm({
               <span>Wrapped HYPE (WHYPE):</span>
               <span style={{ fontWeight: 500 }}>{whypeBalance.toFixed(4)} WHYPE</span>
             </div>
+            {isUsdxlSelected && (
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  color: COLORS.textSecondary,
+                  marginTop: '4px',
+                }}
+              >
+                <span>USDXL Wallet:</span>
+                <span style={{ fontWeight: 500 }}>{usdxlWalletBalance.toFixed(4)} USDXL</span>
+              </div>
+            )}
           </div>
 
           {needsWrapAction && (
@@ -402,7 +452,7 @@ export default function DepositForm({
           </div>
         )}
 
-        {!isHip3Selected && needsWrapAction && (
+        {!isHip3Selected && !isUsdxlSelected && needsWrapAction && (
           <button
             onClick={handleWrap}
             disabled={isLoading || !amount || parseFloat(amount) <= 0}
@@ -428,7 +478,28 @@ export default function DepositForm({
           </button>
         )}
 
-        {!isHip3Selected && !needsWrapAction && !isApproved && (
+        {isUsdxlSelected && (
+          <button
+            onClick={() => usdxlApprove.approve(amount)}
+            disabled={isUsdxlLoading || !amount || parseFloat(amount) <= 0}
+            style={{
+              width: '100%',
+              backgroundColor: COLORS.primary,
+              color: COLORS.bg,
+              padding: '12px 24px',
+              borderRadius: '6px',
+              fontWeight: 500,
+              border: 'none',
+              cursor: isUsdxlLoading || !amount ? 'not-allowed' : 'pointer',
+              opacity: isUsdxlLoading || !amount ? 0.5 : 1,
+              fontSize: '16px',
+            }}
+          >
+            {usdxlApprove.isPending ? 'Approving...' : 'Approve USDXL'}
+          </button>
+        )}
+
+        {!isHip3Selected && !isUsdxlSelected && !needsWrapAction && !isApproved && (
           <button
             onClick={handleApprove}
             disabled={isLoading || !amount || parseFloat(amount) <= 0}
@@ -449,7 +520,7 @@ export default function DepositForm({
           </button>
         )}
 
-        {!isHip3Selected && !needsWrapAction && isApproved && (
+        {!isHip3Selected && !isUsdxlSelected && !needsWrapAction && isApproved && (
           <button
             onClick={handleDeposit}
             disabled={isLoading || !amount || parseFloat(amount) <= 0}
@@ -492,6 +563,29 @@ export default function DepositForm({
             {hip3Deposit.isPending && 'Waiting for approval...'}
             {hip3Deposit.isConfirming && 'Confirming transaction...'}
             {!hip3Deposit.isPending && !hip3Deposit.isConfirming && 'Deposit to HIP-3'}
+          </button>
+        )}
+
+        {isUsdxlSelected && (
+          <button
+            onClick={handleDeposit}
+            disabled={isUsdxlLoading || !amount || parseFloat(amount) <= 0}
+            style={{
+              width: '100%',
+              backgroundColor: COLORS.primary,
+              color: COLORS.bg,
+              padding: '12px 24px',
+              borderRadius: '6px',
+              fontWeight: 500,
+              border: 'none',
+              cursor: isUsdxlLoading || !amount ? 'not-allowed' : 'pointer',
+              opacity: isUsdxlLoading || !amount ? 0.5 : 1,
+              fontSize: '16px',
+            }}
+          >
+            {usdxlDeposit.isPending && 'Waiting for approval...'}
+            {usdxlDeposit.isConfirming && 'Confirming transaction...'}
+            {!usdxlDeposit.isPending && !usdxlDeposit.isConfirming && 'Deposit USDXL'}
           </button>
         )}
 
@@ -540,6 +634,21 @@ export default function DepositForm({
           </div>
         )}
 
+        {usdxlDeposit.isSuccess && (
+          <div
+            style={{
+              padding: '12px',
+              backgroundColor: `${COLORS.primary}33`,
+              borderRadius: '6px',
+              color: COLORS.primary,
+              fontSize: '14px',
+              textAlign: 'center',
+            }}
+          >
+            ✓ USDXL deposit successful!
+          </div>
+        )}
+
         {hip3Deposit.error && (
           <div
             style={{
@@ -552,6 +661,21 @@ export default function DepositForm({
             }}
           >
             HIP-3 Error: {hip3Deposit.error.message}
+          </div>
+        )}
+
+        {usdxlDeposit.error && (
+          <div
+            style={{
+              padding: '12px',
+              backgroundColor: '#ff444433',
+              borderRadius: '6px',
+              color: '#ff4444',
+              fontSize: '14px',
+              textAlign: 'center',
+            }}
+          >
+            USDXL Error: {usdxlDeposit.error.message}
           </div>
         )}
 
@@ -781,6 +905,116 @@ export default function DepositForm({
             }}
           >
             HIP-3 Error: {hip3Withdraw.error.message}
+          </div>
+        )}
+      </div>
+
+      <div
+        style={{
+          marginTop: '24px',
+          padding: '20px',
+          backgroundColor: COLORS.bg,
+          border: `1px solid ${COLORS.border}`,
+          borderRadius: '8px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ margin: 0, color: COLORS.textPrimary, fontSize: '18px' }}>USDXL Withdraw</h3>
+          <span style={{ color: COLORS.textSecondary, fontSize: '13px' }}>
+            Deposited: {usdxlDeposited.toFixed(4)} USDXL
+          </span>
+        </div>
+        <div style={{ position: 'relative' }}>
+          <input
+            type="number"
+            value={usdxlWithdrawAmount}
+            onChange={(e) => setUsdxlWithdrawAmount(e.target.value)}
+            placeholder="0.00"
+            style={{
+              width: '100%',
+              backgroundColor: COLORS.bg,
+              border: `1px solid ${COLORS.border}`,
+              borderRadius: '6px',
+              padding: '10px 16px',
+              color: COLORS.textPrimary,
+              fontSize: '16px',
+              outline: 'none',
+            }}
+          />
+          <span
+            style={{
+              position: 'absolute',
+              right: '16px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: COLORS.textSecondary,
+              fontWeight: 500,
+              fontSize: '14px',
+            }}
+          >
+            USDXL
+          </span>
+        </div>
+        <button
+          onClick={handleUsdxlWithdraw}
+          disabled={
+            usdxlWithdraw.isPending ||
+            usdxlWithdraw.isConfirming ||
+            !usdxlWithdrawAmount ||
+            parseFloat(usdxlWithdrawAmount) <= 0
+          }
+          style={{
+            width: '100%',
+            backgroundColor: '#ff4444',
+            color: COLORS.bg,
+            padding: '12px 24px',
+            borderRadius: '6px',
+            fontWeight: 500,
+            border: 'none',
+            cursor:
+              usdxlWithdraw.isPending || usdxlWithdraw.isConfirming ? 'not-allowed' : 'pointer',
+            opacity:
+              usdxlWithdraw.isPending ||
+              usdxlWithdraw.isConfirming ||
+              !usdxlWithdrawAmount
+                ? 0.5
+                : 1,
+            fontSize: '16px',
+          }}
+        >
+          {usdxlWithdraw.isPending && 'Waiting for approval...'}
+          {usdxlWithdraw.isConfirming && 'Confirming transaction...'}
+          {!usdxlWithdraw.isPending && !usdxlWithdraw.isConfirming && 'Withdraw USDXL'}
+        </button>
+        {usdxlWithdraw.isSuccess && (
+          <div
+            style={{
+              padding: '12px',
+              backgroundColor: '#ff444433',
+              borderRadius: '6px',
+              color: '#ffcccc',
+              fontSize: '14px',
+              textAlign: 'center',
+            }}
+          >
+            ✓ USDXL withdraw successful!
+          </div>
+        )}
+        {usdxlWithdraw.error && (
+          <div
+            style={{
+              padding: '12px',
+              backgroundColor: '#ff444433',
+              borderRadius: '6px',
+              color: '#ff4444',
+              fontSize: '14px',
+              textAlign: 'center',
+            }}
+          >
+            USDXL Error: {usdxlWithdraw.error.message}
           </div>
         )}
       </div>

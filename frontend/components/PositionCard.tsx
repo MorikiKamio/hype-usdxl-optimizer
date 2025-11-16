@@ -130,6 +130,16 @@ export default function PositionCard({ position, isConnected }: PositionCardProp
               </p>
             </div>
           )}
+          {position.usdxlDeposited && position.usdxlDeposited > 0 && (
+            <div style={{ marginTop: '16px' }}>
+              <p style={{ color: COLORS.textSecondary, fontSize: '13px', marginBottom: '4px' }}>
+                USDXL Deposited
+              </p>
+              <p style={{ fontSize: '18px', color: COLORS.textPrimary }}>
+                {position.usdxlDeposited.toLocaleString()} USDXL
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>

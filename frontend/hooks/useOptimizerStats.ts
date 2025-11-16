@@ -82,11 +82,27 @@ export function useOptimizerStats() {
     query: { enabled: OPTIMIZER_ADDRESS !== ZERO_ADDRESS },
   });
 
+  const { data: usdxlCollateralData } = useReadContract({
+    address: OPTIMIZER_ADDRESS,
+    abi: [
+      {
+        name: 'totalUsdxlCollateral',
+        type: 'function',
+        stateMutability: 'view',
+        inputs: [],
+        outputs: [{ type: 'uint256' }],
+      },
+    ],
+    functionName: 'totalUsdxlCollateral',
+    query: { enabled: OPTIMIZER_ADDRESS !== ZERO_ADDRESS },
+  });
+
   const collateral = collateralData ? Number(formatEther(collateralData as bigint)) : 0;
   const debt = debtData ? Number(formatEther(debtData as bigint)) : 0;
   const targetLtv = targetLtvData ? Number(targetLtvData) / 100 : null;
   const tvlUsd = collateral; // assume 1 WHYPE ~ 1 HYPE (placeholder)
   const hip3Tvl = hip3TotalData ? Number(formatEther(hip3TotalData as bigint)) : 0;
+  const usdxlTvl = usdxlCollateralData ? Number(formatEther(usdxlCollateralData as bigint)) : 0;
   const hip3Validator =
     hip3ValidatorData && typeof hip3ValidatorData === 'string'
       ? (hip3ValidatorData as `0x${string}`)
@@ -99,6 +115,7 @@ export function useOptimizerStats() {
     targetLtv,
     tvl: tvlUsd,
     hip3Tvl,
+    usdxlTvl,
     hip3Validator,
     leverage,
   };

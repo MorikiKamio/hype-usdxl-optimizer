@@ -13,6 +13,7 @@ import {
   ERC20_ABI,
   WHYPE_ADDRESS,
   StrategyType,
+  USDXL_ADDRESS,
 } from '@/lib/contracts';
 import { hyperEvmMainnet } from '@/app/providers';
 
@@ -25,6 +26,22 @@ export function useHYPEBalance(address: Address | undefined) {
     functionName: 'balanceOf',
     args: address ? [address] : undefined,
     query: { enabled: !!address && WHYPE_ADDRESS !== ZERO_ADDRESS },
+  });
+
+  return {
+    balance: data ? Number(formatEther(data)) : 0,
+    isLoading,
+    refetch,
+  };
+}
+
+export function useUSDXLBalance(address: Address | undefined) {
+  const { data, isLoading, refetch } = useReadContract({
+    address: USDXL_ADDRESS,
+    abi: ERC20_ABI,
+    functionName: 'balanceOf',
+    args: address ? [address] : undefined,
+    query: { enabled: !!address && USDXL_ADDRESS !== ZERO_ADDRESS },
   });
 
   return {

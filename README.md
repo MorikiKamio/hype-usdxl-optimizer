@@ -13,6 +13,7 @@
 
 - Wrap native HYPE → WHYPE, deposit, and automatically loop supply/borrow on HypurrFi to reach a target LTV.
 - HIP-3 path: delegate HYPE to CoreWriter validators directly from the vault.
+- USDXL Stability path: accept USDXL deposits directly, supply to HypurrFi, and unwind 1:1.
 - Tracks each user’s equity, collateral, debt, and LTV so withdrawals unwind proportional leverage safely.
 - Displays live HypurrFi APYs on the frontend by reading on-chain reserve data.
 - 100% production contracts (WHYPE, HypurrFi pool, USDXL) on HyperEVM—no mocks.
@@ -43,6 +44,7 @@ HYPEUSDXLOptimizerLite
    • Borrows WHYPE, resupplies to reach target LTV
    • Tracks total collateral/debt/shares
    • On withdraw, unwinds proportional share and repays debt
+   • Handles HIP-3 delegation + direct USDXL stability deposits
         │
         ▼
 HypurrFi Pool (production)

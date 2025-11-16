@@ -27,6 +27,7 @@ contract HYPEUSDXLOptimizerLite is Ownable, ReentrancyGuard {
     uint256 public totalDebt;
     uint256 public totalShares;
     uint256 public totalHip3Deposits;
+    uint256 public totalUsdxlCollateral;
 
     struct Position {
         uint256 shares;
@@ -34,6 +35,7 @@ contract HYPEUSDXLOptimizerLite is Ownable, ReentrancyGuard {
 
     mapping(address => Position) public positions;
     mapping(address => uint256) public hip3Deposits;
+    mapping(address => uint256) public usdxlDeposits;
 
     address public hip3Validator;
     uint256 public hip3MinDeposit = HIP3_DEFAULT_MIN;
@@ -42,6 +44,8 @@ contract HYPEUSDXLOptimizerLite is Ownable, ReentrancyGuard {
     event Withdraw(address indexed user, uint256 amount, uint256 sharesBurned);
     event Hip3Deposit(address indexed user, uint256 amount);
     event Hip3Withdraw(address indexed user, uint256 amount);
+    event UsdxlDeposit(address indexed user, uint256 amount);
+    event UsdxlWithdraw(address indexed user, uint256 amount);
     event TargetLtvUpdated(uint256 targetLtvBps);
     event MaxLoopsUpdated(uint256 maxLoops);
     event MinHealthFactorUpdated(uint256 minHealthFactor);
@@ -55,6 +59,8 @@ contract HYPEUSDXLOptimizerLite is Ownable, ReentrancyGuard {
 
         HYPE.forceApprove(address(POOL), 0);
         HYPE.forceApprove(address(POOL), type(uint256).max);
+        USDXL.forceApprove(address(POOL), 0);
+        USDXL.forceApprove(address(POOL), type(uint256).max);
     }
 
     function setTargetLtvBps(uint256 newTarget) external onlyOwner {
@@ -176,6 +182,14 @@ contract HYPEUSDXLOptimizerLite is Ownable, ReentrancyGuard {
         return (hip3Deposits[user], totalHip3Deposits, hip3MinDeposit, hip3Validator);
     }
 
+    function getUsdxlPosition(address user)
+        external
+        view
+        returns (uint256 deposited, uint256 totalDeposited)
+    {
+        return (usdxlDeposits[user], totalUsdxlCollateral);
+    }
+
     function _leverageUp() internal returns (uint256 loops) {
         while (loops < maxLoops) {
             if (totalCollateral == 0) {
@@ -254,6 +268,26 @@ contract HYPEUSDXLOptimizerLite is Ownable, ReentrancyGuard {
     function _delegateToHip3(uint256 amount) internal {
         HYPE.forceApprove(address(CORE_WRITER), amount);
         require(CORE_WRITER.delegateHYPE(hip3Validator, amount), "delegate fail");
+    }
+
+    function depositUsdxl(uint256 amount) external nonReentrant {
+        require(amount > 0, "zero");
+        USDXL.safeTransferFrom(msg.sender, address(this), amount);
+        POOL.supply(address(USDXL), amount, address(this), 0);
+        usdxlDeposits[msg.sender] += amount;
+        totalUsdxlCollateral += amount;
+        emit UsdxlDeposit(msg.sender, amount);
+    }
+
+    function withdrawUsdxl(uint256 amount) external nonReentrant {
+        require(amount > 0, "zero");
+        uint256 balance = usdxlDeposits[msg.sender];
+        require(balance >= amount, "insufficient");
+        usdxlDeposits[msg.sender] = balance - amount;
+        totalUsdxlCollateral -= amount;
+        POOL.withdraw(address(USDXL), amount, address(this));
+        USDXL.safeTransfer(msg.sender, amount);
+        emit UsdxlWithdraw(msg.sender, amount);
     }
 
     function _supply(uint256 amount) internal {

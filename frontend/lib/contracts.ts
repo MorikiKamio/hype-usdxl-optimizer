@@ -40,6 +40,20 @@ export const OPTIMIZER_ABI = [
     outputs: [],
   },
   {
+    name: 'depositUsdxl',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: 'amount', type: 'uint256' }],
+    outputs: [],
+  },
+  {
+    name: 'withdrawUsdxl',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: 'amount', type: 'uint256' }],
+    outputs: [],
+  },
+  {
     name: 'getPosition',
     type: 'function',
     stateMutability: 'view',
@@ -69,6 +83,16 @@ export const OPTIMIZER_ABI = [
       { name: 'totalDeposited', type: 'uint256' },
       { name: 'minDeposit', type: 'uint256' },
       { name: 'validator', type: 'address' },
+    ],
+  },
+  {
+    name: 'getUsdxlPosition',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'user', type: 'address' }],
+    outputs: [
+      { name: 'deposited', type: 'uint256' },
+      { name: 'totalDeposited', type: 'uint256' },
     ],
   },
 ] as const;
