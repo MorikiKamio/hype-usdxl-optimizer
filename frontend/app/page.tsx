@@ -1,6 +1,7 @@
 'use client';
 
 import { useAccount } from 'wagmi';
+import { useRef, useState } from 'react';
 import { TrendingUp, Shield } from 'lucide-react';
 import Header from '@/components/Header';
 import PositionCard from '@/components/PositionCard';
@@ -23,6 +24,8 @@ export default function Home() {
   const { address, isConnected } = useAccount();
   const { position, refetch: refetchPosition } = useUserPosition(address);
   const { balance } = useHYPEBalance(address);
+  const [selectedStrategyId, setSelectedStrategyId] = useState<string>('auto');
+  const depositFormRef = useRef<HTMLDivElement>(null);
 
   // Construct user position for display
   const userPosition = position
@@ -40,6 +43,31 @@ export default function Home() {
         healthFactor: 0,
         activeStrategy: '',
       };
+
+  const playSelectSound = () => {
+    const audio = new Audio('/sounds/select.mp3');
+    audio.volume = 0.3;
+    audio.play().catch(() => {});
+  };
+
+  const handleStrategySelect = (strategyId: string) => {
+    setSelectedStrategyId(strategyId);
+    playSelectSound();
+
+    if (depositFormRef.current) {
+      depositFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      depositFormRef.current.style.transition = 'all 0.3s ease';
+      depositFormRef.current.style.transform = 'scale(1.02)';
+      depositFormRef.current.style.boxShadow = `0 0 40px ${COLORS.primary}, 0 0 80px ${COLORS.primary}44`;
+
+      setTimeout(() => {
+        if (depositFormRef.current) {
+          depositFormRef.current.style.transform = 'scale(1)';
+          depositFormRef.current.style.boxShadow = 'none';
+        }
+      }, 600);
+    }
+  };
 
   return (
     <div style={{ minHeight: '100vh' }}>
@@ -161,18 +189,31 @@ export default function Home() {
                   >
                     Strategy Marketplace
                   </h2>
-                  <span
-                    style={{
-                      padding: '8px 16px',
-                      backgroundColor: `${COLORS.primary}33`,
-                      color: COLORS.primary,
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      fontWeight: 500,
-                    }}
-                  >
-                    Live APR
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: `${COLORS.primary}33`,
+                        color: COLORS.primary,
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        fontWeight: 500,
+                      }}
+                    >
+                      Live APR
+                    </span>
+                    <span
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: `${COLORS.primary}22`,
+                        color: COLORS.textSecondary,
+                        borderRadius: '6px',
+                        fontSize: '13px',
+                      }}
+                    >
+                      👆 Click to deposit
+                    </span>
+                  </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {STRATEGIES.map((strategy) => (
@@ -180,15 +221,21 @@ export default function Home() {
                       key={strategy.id}
                       strategy={strategy}
                       isActive={strategy.name === userPosition.activeStrategy}
+                      isSelected={selectedStrategyId === strategy.id}
+                      onSelect={() => handleStrategySelect(strategy.id)}
                     />
                   ))}
                 </div>
               </div>
 
-              <DepositForm
-                balance={userPosition.balance}
-                onSuccess={() => refetchPosition()}
-              />
+              <div ref={depositFormRef}>
+                <DepositForm
+                  balance={userPosition.balance}
+                  selectedStrategy={selectedStrategyId}
+                  onStrategyChange={setSelectedStrategyId}
+                  onSuccess={() => refetchPosition()}
+                />
+              </div>
             </>
           )}
         </div>

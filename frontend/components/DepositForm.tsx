@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Zap, ChevronDown } from 'lucide-react';
 import { STRATEGIES } from '@/lib/types';
 import { useDeposit, useApprove } from '@/hooks/useContract';
@@ -18,22 +18,33 @@ const COLORS = {
 
 interface DepositFormProps {
   balance: number;
+  selectedStrategy?: string;
+  onStrategyChange?: (strategyId: string) => void;
   onSuccess?: () => void;
 }
 
-export default function DepositForm({ balance, onSuccess }: DepositFormProps) {
+export default function DepositForm({
+  balance,
+  selectedStrategy = 'auto',
+  onStrategyChange,
+  onSuccess,
+}: DepositFormProps) {
   const [amount, setAmount] = useState('');
-  const [selectedStrategy, setSelectedStrategy] = useState('auto');
+  const [localStrategy, setLocalStrategy] = useState(selectedStrategy);
+
+  useEffect(() => {
+    setLocalStrategy(selectedStrategy);
+  }, [selectedStrategy]);
 
   const { approve, isPending: isApproving, isSuccess: isApproved } = useApprove();
-  const {
-    depositAuto,
-    depositToStrategy,
-    isPending,
-    isConfirming,
-    isSuccess,
-    error,
-  } = useDeposit();
+  const { depositAuto, depositToStrategy, isPending, isConfirming, isSuccess, error } = useDeposit();
+
+  const handleStrategyChange = (newStrategy: string) => {
+    setLocalStrategy(newStrategy);
+    if (onStrategyChange) {
+      onStrategyChange(newStrategy);
+    }
+  };
 
   const handleApprove = async () => {
     try {
@@ -51,17 +62,16 @@ export default function DepositForm({ balance, onSuccess }: DepositFormProps) {
     }
 
     try {
-      if (selectedStrategy === 'auto') {
+      if (localStrategy === 'auto') {
         await depositAuto(amount);
       } else {
-        const strategyIndex = STRATEGIES.findIndex((s) => s.id === selectedStrategy);
+        const strategyIndex = STRATEGIES.findIndex((s) => s.id === localStrategy);
         if (strategyIndex === -1) {
           throw new Error('Invalid strategy');
         }
         await depositToStrategy(amount, strategyIndex as StrategyType);
       }
 
-      // Success
       if (isSuccess && onSuccess) {
         onSuccess();
       }
@@ -74,6 +84,9 @@ export default function DepositForm({ balance, onSuccess }: DepositFormProps) {
 
   const isLoading = isPending || isConfirming || isApproving;
 
+  const selectedStrategyDetails =
+    localStrategy === 'auto' ? null : STRATEGIES.find((s) => s.id === localStrategy);
+
   return (
     <div
       style={{
@@ -81,13 +94,14 @@ export default function DepositForm({ balance, onSuccess }: DepositFormProps) {
         borderRadius: '8px',
         padding: '24px',
         border: `1px solid ${COLORS.border}`,
+        transition: 'all 0.3s ease',
       }}
     >
       <h2
         style={{
           fontSize: '20px',
           fontWeight: 500,
-          marginBottom: '24px',
+          marginBottom: '8px',
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
@@ -98,8 +112,27 @@ export default function DepositForm({ balance, onSuccess }: DepositFormProps) {
         Deposit & Optimize
       </h2>
 
+      {selectedStrategyDetails && (
+        <div
+          style={{
+            padding: '12px',
+            backgroundColor: `${COLORS.primary}11`,
+            border: `1px solid ${COLORS.primary}`,
+            borderRadius: '6px',
+            marginBottom: '16px',
+          }}
+        >
+          <p style={{ fontSize: '13px', color: COLORS.textSecondary, margin: '0 0 4px 0' }}>
+            Selected Strategy:
+          </p>
+          <p style={{ fontSize: '16px', color: COLORS.primary, fontWeight: 500, margin: 0 }}>
+            {selectedStrategyDetails.emoji} {selectedStrategyDetails.name} (
+            {selectedStrategyDetails.apr}% APR)
+          </p>
+        </div>
+      )}
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        {/* Amount Input */}
         <div>
           <label
             style={{
@@ -148,7 +181,6 @@ export default function DepositForm({ balance, onSuccess }: DepositFormProps) {
           </p>
         </div>
 
-        {/* Strategy Selection */}
         <div>
           <label
             style={{
@@ -162,8 +194,8 @@ export default function DepositForm({ balance, onSuccess }: DepositFormProps) {
           </label>
           <div style={{ position: 'relative' }}>
             <select
-              value={selectedStrategy}
-              onChange={(e) => setSelectedStrategy(e.target.value)}
+              value={localStrategy}
+              onChange={(e) => handleStrategyChange(e.target.value)}
               disabled={isLoading}
               style={{
                 width: '100%',
@@ -178,10 +210,10 @@ export default function DepositForm({ balance, onSuccess }: DepositFormProps) {
                 appearance: 'none',
               }}
             >
-              <option value="auto">Auto-Select (Highest APR)</option>
+              <option value="auto">🎯 Auto-Select (Highest APR)</option>
               {STRATEGIES.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.name} - {s.apr}% APR
+                  {s.emoji} {s.name} - {s.apr}% APR
                 </option>
               ))}
             </select>
@@ -199,7 +231,6 @@ export default function DepositForm({ balance, onSuccess }: DepositFormProps) {
           </div>
         </div>
 
-        {/* Buttons */}
         {!isApproved ? (
           <button
             onClick={handleApprove}
@@ -214,6 +245,7 @@ export default function DepositForm({ balance, onSuccess }: DepositFormProps) {
               border: 'none',
               cursor: isLoading || !amount ? 'not-allowed' : 'pointer',
               opacity: isLoading || !amount ? 0.5 : 1,
+              fontSize: '16px',
             }}
           >
             {isApproving ? 'Approving...' : 'Approve HYPE'}
@@ -232,10 +264,11 @@ export default function DepositForm({ balance, onSuccess }: DepositFormProps) {
               border: 'none',
               cursor: isLoading || !amount ? 'not-allowed' : 'pointer',
               opacity: isLoading || !amount ? 0.5 : 1,
+              fontSize: '16px',
             }}
           >
             {isPending && 'Waiting for approval...'}
-            {isConfirming && 'Confirming...'}
+            {isConfirming && 'Confirming transaction...'}
             {!isPending && !isConfirming && 'Deposit'}
           </button>
         )}

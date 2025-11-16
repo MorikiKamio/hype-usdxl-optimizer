@@ -18,10 +18,16 @@ const COLORS = {
 interface StrategyCardProps {
   strategy: Strategy;
   isActive?: boolean;
+  isSelected?: boolean;
   onSelect?: () => void;
 }
 
-export default function StrategyCard({ strategy, isActive, onSelect }: StrategyCardProps) {
+export default function StrategyCard({
+  strategy,
+  isActive = false,
+  isSelected = false,
+  onSelect,
+}: StrategyCardProps) {
   const riskColors = {
     High: COLORS.riskHigh,
     Medium: COLORS.riskMedium,
@@ -30,18 +36,81 @@ export default function StrategyCard({ strategy, isActive, onSelect }: StrategyC
 
   const riskColor = riskColors[strategy.risk];
 
+  const getBorderColor = () => {
+    if (isActive) return riskColor;
+    if (isSelected) return COLORS.primary;
+    return COLORS.border;
+  };
+
+  const getBackgroundColor = () => {
+    if (isActive) return COLORS.cardBg;
+    if (isSelected) return `${COLORS.primary}11`;
+    return COLORS.bg;
+  };
+
   return (
     <div
       onClick={onSelect}
       style={{
         padding: '20px',
         borderRadius: '8px',
-        border: `1px solid ${isActive ? COLORS.primary : COLORS.border}`,
-        backgroundColor: isActive ? COLORS.cardBg : COLORS.bg,
+        border: `2px solid ${getBorderColor()}`,
+        backgroundColor: getBackgroundColor(),
         cursor: 'pointer',
-        transition: 'all 0.2s',
+        transition: 'all 0.2s ease',
+        position: 'relative',
+      }}
+      onMouseEnter={(e) => {
+        if (!isActive && !isSelected) {
+          e.currentTarget.style.backgroundColor = COLORS.cardBg;
+          e.currentTarget.style.borderColor = COLORS.primary;
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!isActive && !isSelected) {
+          e.currentTarget.style.backgroundColor = COLORS.bg;
+          e.currentTarget.style.borderColor = COLORS.border;
+        }
       }}
     >
+      {isSelected && !isActive && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '12px',
+            right: '12px',
+            padding: '4px 12px',
+            backgroundColor: COLORS.primary,
+            color: COLORS.bg,
+            borderRadius: '12px',
+            fontSize: '11px',
+            fontWeight: 600,
+            letterSpacing: '0.5px',
+          }}
+        >
+          SELECTED
+        </div>
+      )}
+
+      {isActive && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '12px',
+            right: '12px',
+            padding: '4px 12px',
+            backgroundColor: '#00ff88',
+            color: COLORS.bg,
+            borderRadius: '12px',
+            fontSize: '11px',
+            fontWeight: 600,
+            letterSpacing: '0.5px',
+          }}
+        >
+          ACTIVE
+        </div>
+      )}
+
       <div
         style={{
           display: 'flex',
