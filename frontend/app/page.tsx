@@ -71,6 +71,9 @@ export default function Home() {
         currentAPR: liveAPR,
         healthFactor: position.healthFactor,
         activeStrategy: position.activeStrategy,
+        collateral: position.collateral,
+        debt: position.debt,
+        ltv: position.ltv,
       }
     : {
         balance: nativeBalance,
@@ -78,6 +81,9 @@ export default function Home() {
         currentAPR: liveAPR,
         healthFactor: 0,
         activeStrategy: '',
+        collateral: 0,
+        debt: 0,
+        ltv: 0,
       };
 
   const playSelectSound = () => {

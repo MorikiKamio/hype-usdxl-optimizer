@@ -31,8 +31,11 @@ export const OPTIMIZER_ABI = [
     stateMutability: 'view',
     inputs: [{ name: 'user', type: 'address' }],
     outputs: [
-      { name: 'deposited', type: 'uint256' },
-      { name: 'strategy', type: 'uint256' },
+      { name: 'equity', type: 'uint256' },
+      { name: 'shares', type: 'uint256' },
+      { name: 'collateral', type: 'uint256' },
+      { name: 'debt', type: 'uint256' },
+      { name: 'ltvBps', type: 'uint256' },
     ],
   },
   {
@@ -40,10 +43,7 @@ export const OPTIMIZER_ABI = [
     type: 'function',
     stateMutability: 'view',
     inputs: [{ name: 'user', type: 'address' }],
-    outputs: [
-      { name: 'deposited', type: 'uint256' },
-      { name: 'strategy', type: 'uint256' },
-    ],
+    outputs: [{ name: 'shares', type: 'uint256' }],
   },
 ] as const;
 

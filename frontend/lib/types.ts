@@ -16,6 +16,9 @@ export interface UserPosition {
   currentAPR: number;
   healthFactor: number;
   activeStrategy: string;
+  collateral: number;
+  debt: number;
+  ltv: number;
 }
 
 export const STRATEGIES: Strategy[] = [

@@ -70,7 +70,7 @@ export default function PositionCard({ position, isConnected }: PositionCardProp
             Current APR
           </p>
           <p style={{ fontSize: '24px', fontWeight: 400, color: COLORS.primary }}>
-            {position?.currentAPR.toFixed(1) || '0'}%
+            {position?.currentAPR ? position.currentAPR.toFixed(2) : '0.00'}%
           </p>
         </div>
         <div>
@@ -94,6 +94,32 @@ export default function PositionCard({ position, isConnected }: PositionCardProp
               {position.activeStrategy}
             </span>
           </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px', marginTop: '12px' }}>
+            <div>
+              <p style={{ color: COLORS.textSecondary, fontSize: '13px', marginBottom: '4px' }}>
+                Collateral Exposure
+              </p>
+              <p style={{ fontSize: '18px', color: COLORS.textPrimary }}>
+                {position.collateral.toLocaleString()} WHYPE
+              </p>
+            </div>
+            <div>
+              <p style={{ color: COLORS.textSecondary, fontSize: '13px', marginBottom: '4px' }}>
+                Debt Exposure
+              </p>
+              <p style={{ fontSize: '18px', color: COLORS.textPrimary }}>
+                {position.debt.toLocaleString()} WHYPE
+              </p>
+            </div>
+            <div>
+              <p style={{ color: COLORS.textSecondary, fontSize: '13px', marginBottom: '4px' }}>
+                LTV
+              </p>
+              <p style={{ fontSize: '18px', color: COLORS.textPrimary }}>
+                {position.ltv.toFixed(2)}%
+              </p>
+            </div>
+          </div>
         </div>
       )}
     </div>

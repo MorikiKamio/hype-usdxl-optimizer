@@ -47,15 +47,18 @@ export function useUserPosition(address: Address | undefined) {
     return { position: null, isLoading, error, refetch };
   }
 
-  const [deposited, strategy] = data as [bigint, bigint];
+  const [equity, , collateral, debt, ltvBps] = data as [bigint, bigint, bigint, bigint, bigint];
 
   return {
     position: {
-      deposited: Number(formatEther(deposited)),
-      strategy: Number(strategy),
-      activeStrategy: Number(strategy) === StrategyType.Stability ? 'Stability' : 'Leverage',
-      currentAPR: Number(strategy) === StrategyType.Stability ? 4 : 18,
+      deposited: Number(formatEther(equity)),
+      strategy: StrategyType.Leverage,
+      activeStrategy: 'Leverage',
+      currentAPR: 0,
       healthFactor: 0,
+      collateral: Number(formatEther(collateral)),
+      debt: Number(formatEther(debt)),
+      ltv: Number(ltvBps) / 100,
     },
     isLoading,
     error,
