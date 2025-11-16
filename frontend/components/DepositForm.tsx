@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Zap, ChevronDown, ArrowRightLeft } from 'lucide-react';
 import { STRATEGIES } from '@/lib/types';
-import { useDeposit, useApprove } from '@/hooks/useContract';
+import { useDeposit, useApprove, useWithdraw } from '@/hooks/useContract';
 import { useWrapHYPE } from '@/hooks/useWrapHYPE';
 import { StrategyType } from '@/lib/contracts';
 
@@ -20,6 +20,7 @@ const COLORS = {
 interface DepositFormProps {
   balance: number;
   whypeBalance?: number;
+  depositedBalance?: number;
   selectedStrategy?: string;
   onStrategyChange?: (strategyId: string) => void;
   onSuccess?: () => void;
@@ -28,11 +29,13 @@ interface DepositFormProps {
 export default function DepositForm({
   balance,
   whypeBalance = 0,
+  depositedBalance = 0,
   selectedStrategy = 'auto',
   onStrategyChange,
   onSuccess,
 }: DepositFormProps) {
   const [amount, setAmount] = useState('');
+  const [withdrawAmount, setWithdrawAmount] = useState('');
   const [localStrategy, setLocalStrategy] = useState(selectedStrategy);
   const [needsWrap, setNeedsWrap] = useState(false);
 
@@ -48,6 +51,13 @@ export default function DepositForm({
   const { wrap, isPending: isWrapping, isSuccess: wrapSuccess } = useWrapHYPE();
   const { approve, isPending: isApproving, isSuccess: isApproved } = useApprove();
   const { depositAuto, depositToStrategy, isPending, isConfirming, isSuccess, error } = useDeposit();
+  const {
+    withdraw,
+    isPending: isWithdrawPending,
+    isConfirming: isWithdrawConfirming,
+    isSuccess: isWithdrawSuccess,
+    error: withdrawError,
+  } = useWithdraw();
 
   const handleStrategyChange = (newStrategy: string) => {
     setLocalStrategy(newStrategy);
@@ -107,6 +117,31 @@ export default function DepositForm({
       console.error('Deposit failed:', err);
       const message =
         err instanceof Error ? err.message : 'Deposit failed. Please try again.';
+      alert(message);
+    }
+  };
+
+  const handleWithdraw = async () => {
+    if (!withdrawAmount || parseFloat(withdrawAmount) <= 0) {
+      alert('Please enter a valid amount');
+      return;
+    }
+
+    if (parseFloat(withdrawAmount) > depositedBalance) {
+      alert('Amount exceeds deposited balance');
+      return;
+    }
+
+    try {
+      await withdraw(withdrawAmount);
+      setWithdrawAmount('');
+      if (onSuccess) {
+        onSuccess();
+      }
+    } catch (err) {
+      console.error('Withdraw failed:', err);
+      const message =
+        err instanceof Error ? err.message : 'Withdraw failed. Please try again.';
       alert(message);
     }
   };
@@ -411,6 +446,112 @@ export default function DepositForm({
             }}
           >
             Error: {error.message}
+          </div>
+        )}
+      </div>
+
+      <div
+        style={{
+          marginTop: '24px',
+          padding: '20px',
+          backgroundColor: COLORS.bg,
+          border: `1px solid ${COLORS.border}`,
+          borderRadius: '8px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ margin: 0, color: COLORS.textPrimary, fontSize: '18px' }}>Withdraw</h3>
+          <span style={{ color: COLORS.textSecondary, fontSize: '13px' }}>
+            Deposited: {depositedBalance.toFixed(4)} WHYPE
+          </span>
+        </div>
+        <div style={{ position: 'relative' }}>
+          <input
+            type="number"
+            value={withdrawAmount}
+            onChange={(e) => setWithdrawAmount(e.target.value)}
+            placeholder="0.00"
+            style={{
+              width: '100%',
+              backgroundColor: COLORS.bg,
+              border: `1px solid ${COLORS.border}`,
+              borderRadius: '6px',
+              padding: '10px 16px',
+              color: COLORS.textPrimary,
+              fontSize: '16px',
+              outline: 'none',
+            }}
+          />
+          <span
+            style={{
+              position: 'absolute',
+              right: '16px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: COLORS.textSecondary,
+              fontWeight: 500,
+              fontSize: '14px',
+            }}
+          >
+            WHYPE
+          </span>
+        </div>
+        <button
+          onClick={handleWithdraw}
+          disabled={
+            isWithdrawPending ||
+            isWithdrawConfirming ||
+            !withdrawAmount ||
+            parseFloat(withdrawAmount) <= 0
+          }
+          style={{
+            width: '100%',
+            backgroundColor: '#ff4444',
+            color: COLORS.bg,
+            padding: '12px 24px',
+            borderRadius: '6px',
+            fontWeight: 500,
+            border: 'none',
+            cursor:
+              isWithdrawPending || isWithdrawConfirming ? 'not-allowed' : 'pointer',
+            opacity:
+              isWithdrawPending || isWithdrawConfirming || !withdrawAmount ? 0.5 : 1,
+            fontSize: '16px',
+          }}
+        >
+          {isWithdrawPending && 'Waiting for approval...'}
+          {isWithdrawConfirming && 'Confirming transaction...'}
+          {!isWithdrawPending && !isWithdrawConfirming && 'Withdraw'}
+        </button>
+        {isWithdrawSuccess && (
+          <div
+            style={{
+              padding: '12px',
+              backgroundColor: '#ff444433',
+              borderRadius: '6px',
+              color: '#ffcccc',
+              fontSize: '14px',
+              textAlign: 'center',
+            }}
+          >
+            ✓ Withdraw successful!
+          </div>
+        )}
+        {withdrawError && (
+          <div
+            style={{
+              padding: '12px',
+              backgroundColor: '#ff444433',
+              borderRadius: '6px',
+              color: '#ff4444',
+              fontSize: '14px',
+              textAlign: 'center',
+            }}
+          >
+            Error: {withdrawError.message}
           </div>
         )}
       </div>
