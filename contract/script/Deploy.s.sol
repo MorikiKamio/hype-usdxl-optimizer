@@ -13,7 +13,7 @@ contract DeployScript is Script {
     address constant HYPURRFI_POOL = 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b;
     
     // TODO: Update these addresses after finding them on testnet
-    address constant HYPE_TOKEN = address(0); // Native HYPE or wrapped
+    address constant HYPE_TOKEN = 0x5555555555555555555555555555555555555555; // Wrapped HYPE (wHYPE)
     address constant USDXL_TOKEN = address(0); // USDXL address
     address constant DEFAULT_VALIDATOR = address(0); // Validator for HIP-3
     

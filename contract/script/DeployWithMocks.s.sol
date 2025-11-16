@@ -13,8 +13,8 @@ contract DeployWithMocksScript is Script {
     // HyperEVM Testnet addresses
     address constant HYPURRFI_POOL = 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b;
     
-    // HYPE is native token on HyperEVM
-    address constant HYPE_TOKEN = address(0); // Use address(0) for native token
+    // Wrapped HYPE (wHYPE) address on HyperEVM Testnet
+    address constant HYPE_TOKEN = 0x5555555555555555555555555555555555555555;
     
     // Placeholder validator address (can be updated later)
     address constant DEFAULT_VALIDATOR = 0x0000000000000000000000000000000000000001;
@@ -62,7 +62,7 @@ contract DeployWithMocksScript is Script {
         console.log("HYPEUSDXLOptimizer:", address(optimizer));
         console.log("");
         console.log("Configuration:");
-        console.log("- HYPE Token: NATIVE (address(0))");
+        console.log("- HYPE Token:", HYPE_TOKEN);
         console.log("- USDXL Token:", address(mockUSDXL));
         console.log("- HypurrFi Pool:", HYPURRFI_POOL);
         console.log("- Default Validator:", DEFAULT_VALIDATOR);
