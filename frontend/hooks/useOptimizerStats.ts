@@ -52,10 +52,45 @@ export function useOptimizerStats() {
     query: { enabled: OPTIMIZER_ADDRESS !== ZERO_ADDRESS },
   });
 
+  const { data: hip3TotalData } = useReadContract({
+    address: OPTIMIZER_ADDRESS,
+    abi: [
+      {
+        name: 'totalHip3Deposits',
+        type: 'function',
+        stateMutability: 'view',
+        inputs: [],
+        outputs: [{ type: 'uint256' }],
+      },
+    ],
+    functionName: 'totalHip3Deposits',
+    query: { enabled: OPTIMIZER_ADDRESS !== ZERO_ADDRESS },
+  });
+
+  const { data: hip3ValidatorData } = useReadContract({
+    address: OPTIMIZER_ADDRESS,
+    abi: [
+      {
+        name: 'hip3Validator',
+        type: 'function',
+        stateMutability: 'view',
+        inputs: [],
+        outputs: [{ type: 'address' }],
+      },
+    ],
+    functionName: 'hip3Validator',
+    query: { enabled: OPTIMIZER_ADDRESS !== ZERO_ADDRESS },
+  });
+
   const collateral = collateralData ? Number(formatEther(collateralData as bigint)) : 0;
   const debt = debtData ? Number(formatEther(debtData as bigint)) : 0;
   const targetLtv = targetLtvData ? Number(targetLtvData) / 100 : null;
   const tvlUsd = collateral; // assume 1 WHYPE ~ 1 HYPE (placeholder)
+  const hip3Tvl = hip3TotalData ? Number(formatEther(hip3TotalData as bigint)) : 0;
+  const hip3Validator =
+    hip3ValidatorData && typeof hip3ValidatorData === 'string'
+      ? (hip3ValidatorData as `0x${string}`)
+      : undefined;
   const leverage = collateral > 0 ? collateral / (collateral - debt) : 1;
 
   return {
@@ -63,6 +98,8 @@ export function useOptimizerStats() {
     debt,
     targetLtv,
     tvl: tvlUsd,
+    hip3Tvl,
+    hip3Validator,
     leverage,
   };
 }

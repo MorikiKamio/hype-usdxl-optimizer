@@ -12,6 +12,7 @@
 ## ✨ What It Does
 
 - Wrap native HYPE → WHYPE, deposit, and automatically loop supply/borrow on HypurrFi to reach a target LTV.
+- HIP-3 path: delegate HYPE to CoreWriter validators directly from the vault.
 - Tracks each user’s equity, collateral, debt, and LTV so withdrawals unwind proportional leverage safely.
 - Displays live HypurrFi APYs on the frontend by reading on-chain reserve data.
 - 100% production contracts (WHYPE, HypurrFi pool, USDXL) on HyperEVM—no mocks.
@@ -51,6 +52,7 @@ Key contract parameters:
 - `targetLtvBps` (default 70%)
 - `maxLoops` (default 5)
 - `minHealthFactor` (default 1.3)
+- `hip3MinDeposit` (default 100 HYPE) + owner-settable validator address
 These can be tuned by the owner to balance yield vs. safety.
 
 ## 🖥 Frontend Overview

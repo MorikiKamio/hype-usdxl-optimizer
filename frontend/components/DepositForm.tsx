@@ -6,6 +6,7 @@ import { STRATEGIES } from '@/lib/types';
 import { useDeposit, useApprove, useWithdraw } from '@/hooks/useContract';
 import { useWrapHYPE } from '@/hooks/useWrapHYPE';
 import { StrategyType } from '@/lib/contracts';
+import { useHip3DepositAction, useHip3WithdrawAction } from '@/hooks/useHip3';
 
 const COLORS = {
   bg: '#0a1f1f',
@@ -21,6 +22,9 @@ interface DepositFormProps {
   balance: number;
   whypeBalance?: number;
   depositedBalance?: number;
+  hip3Balance?: number;
+  hip3MinDeposit?: number;
+  hip3Validator?: string;
   selectedStrategy?: string;
   onStrategyChange?: (strategyId: string) => void;
   onSuccess?: () => void;
@@ -30,14 +34,20 @@ export default function DepositForm({
   balance,
   whypeBalance = 0,
   depositedBalance = 0,
+  hip3Balance = 0,
+  hip3MinDeposit = 0,
+  hip3Validator,
   selectedStrategy = 'auto',
   onStrategyChange,
   onSuccess,
 }: DepositFormProps) {
   const [amount, setAmount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [hip3WithdrawAmount, setHip3WithdrawAmount] = useState('');
   const [localStrategy, setLocalStrategy] = useState(selectedStrategy);
   const [needsWrap, setNeedsWrap] = useState(false);
+
+  const isHip3Selected = localStrategy === 'CORE_WRITER_HIP3';
 
   useEffect(() => {
     setLocalStrategy(selectedStrategy);
@@ -45,8 +55,12 @@ export default function DepositForm({
 
   useEffect(() => {
     const amountNum = parseFloat(amount) || 0;
-    setNeedsWrap(amountNum > whypeBalance && amountNum <= balance);
-  }, [amount, balance, whypeBalance]);
+    if (isHip3Selected) {
+      setNeedsWrap(false);
+    } else {
+      setNeedsWrap(amountNum > whypeBalance && amountNum <= balance);
+    }
+  }, [amount, balance, whypeBalance, isHip3Selected]);
 
   const { wrap, isPending: isWrapping, isSuccess: wrapSuccess } = useWrapHYPE();
   const { approve, isPending: isApproving, isSuccess: isApproved } = useApprove();
@@ -58,6 +72,8 @@ export default function DepositForm({
     isSuccess: isWithdrawSuccess,
     error: withdrawError,
   } = useWithdraw();
+  const hip3Deposit = useHip3DepositAction();
+  const hip3Withdraw = useHip3WithdrawAction();
 
   const handleStrategyChange = (newStrategy: string) => {
     setLocalStrategy(newStrategy);
@@ -100,7 +116,17 @@ export default function DepositForm({
     }
 
     try {
-      if (localStrategy === 'auto') {
+      if (isHip3Selected) {
+        if (hip3MinDeposit && parseFloat(amount) < hip3MinDeposit) {
+          alert(`Minimum deposit is ${hip3MinDeposit} HYPE`);
+          return;
+        }
+        if (!hip3Validator || hip3Validator === '0x0000000000000000000000000000000000000000') {
+          alert('HIP-3 validator not configured yet');
+          return;
+        }
+        await hip3Deposit.action(amount);
+      } else if (localStrategy === 'auto') {
         await depositAuto(amount);
       } else {
         const strategyIndex = STRATEGIES.findIndex((s) => s.id === localStrategy);
@@ -110,7 +136,7 @@ export default function DepositForm({
         await depositToStrategy(amount, strategyIndex as StrategyType);
       }
 
-      if (isSuccess && onSuccess) {
+      if (onSuccess) {
         onSuccess();
       }
     } catch (err) {
@@ -146,7 +172,32 @@ export default function DepositForm({
     }
   };
 
-  const isLoading = isPending || isConfirming || isApproving || isWrapping;
+  const handleHip3Withdraw = async () => {
+    if (!hip3WithdrawAmount || parseFloat(hip3WithdrawAmount) <= 0) {
+      alert('Please enter a valid amount');
+      return;
+    }
+    if (parseFloat(hip3WithdrawAmount) > hip3Balance) {
+      alert('Amount exceeds HIP-3 balance');
+      return;
+    }
+
+    try {
+      await hip3Withdraw.action(hip3WithdrawAmount);
+      setHip3WithdrawAmount('');
+      onSuccess?.();
+    } catch (err) {
+      console.error('HIP-3 withdraw failed:', err);
+      const message =
+        err instanceof Error ? err.message : 'Withdraw failed. Please try again.';
+      alert(message);
+    }
+  };
+
+  const isLeverageLoading = isPending || isConfirming || isApproving || isWrapping;
+  const isHip3Loading = hip3Deposit.isPending || hip3Deposit.isConfirming;
+  const disableInputs = isHip3Selected ? isHip3Loading : isLeverageLoading;
+  const isLoading = isLeverageLoading;
 
   const selectedStrategyDetails =
     localStrategy === 'auto' ? null : STRATEGIES.find((s) => s.id === localStrategy);
@@ -211,17 +262,17 @@ export default function DepositForm({
             Amount
           </label>
           <div style={{ position: 'relative' }}>
-            <input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.00"
-              disabled={isLoading}
-              style={{
-                width: '100%',
-                backgroundColor: COLORS.bg,
-                border: `1px solid ${COLORS.border}`,
-                borderRadius: '6px',
+              <input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0.00"
+                disabled={disableInputs}
+                style={{
+                  width: '100%',
+                  backgroundColor: COLORS.bg,
+                  border: `1px solid ${COLORS.border}`,
+                  borderRadius: '6px',
                 padding: '10px 16px',
                 color: COLORS.textPrimary,
                 fontSize: '16px',
@@ -334,7 +385,24 @@ export default function DepositForm({
           </div>
         </div>
 
-        {needsWrapAction && (
+        {isHip3Selected && (
+          <div
+            style={{
+              marginTop: '8px',
+              padding: '12px',
+              backgroundColor: `${COLORS.primary}11`,
+              border: `1px dashed ${COLORS.primary}`,
+              borderRadius: '6px',
+              color: COLORS.textSecondary,
+              fontSize: '13px',
+            }}
+          >
+            <div>HIP-3 Validator: {hip3Validator || 'Not set'}</div>
+            <div>Minimum deposit: {hip3MinDeposit.toFixed(2)} HYPE</div>
+          </div>
+        )}
+
+        {!isHip3Selected && needsWrapAction && (
           <button
             onClick={handleWrap}
             disabled={isLoading || !amount || parseFloat(amount) <= 0}
@@ -360,7 +428,7 @@ export default function DepositForm({
           </button>
         )}
 
-        {!needsWrapAction && !isApproved && (
+        {!isHip3Selected && !needsWrapAction && !isApproved && (
           <button
             onClick={handleApprove}
             disabled={isLoading || !amount || parseFloat(amount) <= 0}
@@ -381,7 +449,7 @@ export default function DepositForm({
           </button>
         )}
 
-        {!needsWrapAction && isApproved && (
+        {!isHip3Selected && !needsWrapAction && isApproved && (
           <button
             onClick={handleDeposit}
             disabled={isLoading || !amount || parseFloat(amount) <= 0}
@@ -401,6 +469,29 @@ export default function DepositForm({
             {isPending && 'Waiting for approval...'}
             {isConfirming && 'Confirming transaction...'}
             {!isPending && !isConfirming && 'Deposit'}
+          </button>
+        )}
+
+        {isHip3Selected && (
+          <button
+            onClick={handleDeposit}
+            disabled={isHip3Loading || !amount || parseFloat(amount) <= 0}
+            style={{
+              width: '100%',
+              backgroundColor: COLORS.primary,
+              color: COLORS.bg,
+              padding: '12px 24px',
+              borderRadius: '6px',
+              fontWeight: 500,
+              border: 'none',
+              cursor: isHip3Loading || !amount ? 'not-allowed' : 'pointer',
+              opacity: isHip3Loading || !amount ? 0.5 : 1,
+              fontSize: '16px',
+            }}
+          >
+            {hip3Deposit.isPending && 'Waiting for approval...'}
+            {hip3Deposit.isConfirming && 'Confirming transaction...'}
+            {!hip3Deposit.isPending && !hip3Deposit.isConfirming && 'Deposit to HIP-3'}
           </button>
         )}
 
@@ -431,6 +522,36 @@ export default function DepositForm({
             }}
           >
             ✓ Wrapped successfully! Approve WHYPE to continue.
+          </div>
+        )}
+
+        {hip3Deposit.isSuccess && (
+          <div
+            style={{
+              padding: '12px',
+              backgroundColor: `${COLORS.primary}33`,
+              borderRadius: '6px',
+              color: COLORS.primary,
+              fontSize: '14px',
+              textAlign: 'center',
+            }}
+          >
+            ✓ HIP-3 deposit successful!
+          </div>
+        )}
+
+        {hip3Deposit.error && (
+          <div
+            style={{
+              padding: '12px',
+              backgroundColor: '#ff444433',
+              borderRadius: '6px',
+              color: '#ff4444',
+              fontSize: '14px',
+              textAlign: 'center',
+            }}
+          >
+            HIP-3 Error: {hip3Deposit.error.message}
           </div>
         )}
 
@@ -552,6 +673,114 @@ export default function DepositForm({
             }}
           >
             Error: {withdrawError.message}
+          </div>
+        )}
+      </div>
+
+      <div
+        style={{
+          marginTop: '24px',
+          padding: '20px',
+          backgroundColor: COLORS.bg,
+          border: `1px solid ${COLORS.border}`,
+          borderRadius: '8px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ margin: 0, color: COLORS.textPrimary, fontSize: '18px' }}>HIP-3 Withdraw</h3>
+          <span style={{ color: COLORS.textSecondary, fontSize: '13px' }}>
+            Delegated: {hip3Balance.toFixed(4)} HYPE
+          </span>
+        </div>
+        <div style={{ position: 'relative' }}>
+          <input
+            type="number"
+            value={hip3WithdrawAmount}
+            onChange={(e) => setHip3WithdrawAmount(e.target.value)}
+            placeholder="0.00"
+            style={{
+              width: '100%',
+              backgroundColor: COLORS.bg,
+              border: `1px solid ${COLORS.border}`,
+              borderRadius: '6px',
+              padding: '10px 16px',
+              color: COLORS.textPrimary,
+              fontSize: '16px',
+              outline: 'none',
+            }}
+          />
+          <span
+            style={{
+              position: 'absolute',
+              right: '16px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: COLORS.textSecondary,
+              fontWeight: 500,
+              fontSize: '14px',
+            }}
+          >
+            HYPE
+          </span>
+        </div>
+        <button
+          onClick={handleHip3Withdraw}
+          disabled={
+            hip3Withdraw.isPending ||
+            hip3Withdraw.isConfirming ||
+            !hip3WithdrawAmount ||
+            parseFloat(hip3WithdrawAmount) <= 0
+          }
+          style={{
+            width: '100%',
+            backgroundColor: '#ff4444',
+            color: COLORS.bg,
+            padding: '12px 24px',
+            borderRadius: '6px',
+            fontWeight: 500,
+            border: 'none',
+            cursor:
+              hip3Withdraw.isPending || hip3Withdraw.isConfirming ? 'not-allowed' : 'pointer',
+            opacity:
+              hip3Withdraw.isPending || hip3Withdraw.isConfirming || !hip3WithdrawAmount
+                ? 0.5
+                : 1,
+            fontSize: '16px',
+          }}
+        >
+          {hip3Withdraw.isPending && 'Waiting for approval...'}
+          {hip3Withdraw.isConfirming && 'Confirming transaction...'}
+          {!hip3Withdraw.isPending && !hip3Withdraw.isConfirming && 'Withdraw HIP-3'}
+        </button>
+        {hip3Withdraw.isSuccess && (
+          <div
+            style={{
+              padding: '12px',
+              backgroundColor: '#ff444433',
+              borderRadius: '6px',
+              color: '#ffcccc',
+              fontSize: '14px',
+              textAlign: 'center',
+            }}
+          >
+            ✓ HIP-3 withdraw successful!
+          </div>
+        )}
+        {hip3Withdraw.error && (
+          <div
+            style={{
+              padding: '12px',
+              backgroundColor: '#ff444433',
+              borderRadius: '6px',
+              color: '#ff4444',
+              fontSize: '14px',
+              textAlign: 'center',
+            }}
+          >
+            HIP-3 Error: {hip3Withdraw.error.message}
           </div>
         )}
       </div>

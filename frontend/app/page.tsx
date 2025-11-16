@@ -12,6 +12,7 @@ import { useUserPosition, useHYPEBalance } from '@/hooks/useContract';
 import { useNativeHYPEBalance } from '@/hooks/useNativeHYPE';
 import { useHypurrFiRates } from '@/hooks/useHypurrFiRates';
 import { useOptimizerStats } from '@/hooks/useOptimizerStats';
+import { useHip3Position } from '@/hooks/useHip3';
 
 function deriveStrategyApr(
   strategyId: string,
@@ -53,6 +54,7 @@ export default function Home() {
   const depositFormRef = useRef<HTMLDivElement>(null);
   const { supplyAPR, borrowAPR, isLoading: aprLoading } = useHypurrFiRates();
   const optimizerStats = useOptimizerStats();
+  const hip3Position = useHip3Position(address);
 
   const strategyAprs = useMemo(() => {
     const map: Record<string, number | null> = {};
@@ -76,6 +78,7 @@ export default function Home() {
         collateral: position.collateral,
         debt: position.debt,
         ltv: position.ltv,
+        hip3Deposited: hip3Position.deposited,
       }
     : {
         balance: nativeBalance,
@@ -86,6 +89,7 @@ export default function Home() {
         collateral: 0,
         debt: 0,
         ltv: 0,
+        hip3Deposited: hip3Position.deposited,
       };
 
   const playSelectSound = () => {
@@ -266,6 +270,7 @@ export default function Home() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {STRATEGIES.map((strategy) => {
                     const isLeverage = strategy.id === 'HYPE_LEVERAGE';
+                    const isHip3 = strategy.id === 'CORE_WRITER_HIP3';
                     return (
                       <StrategyCard
                         key={strategy.id}
@@ -273,11 +278,21 @@ export default function Home() {
                         isActive={strategy.name === userPosition.activeStrategy}
                         isSelected={selectedStrategyId === strategy.id}
                         liveApr={strategyAprs[strategy.id]}
-                        liveTvl={isLeverage ? optimizerStats.tvl : null}
+                        liveTvl={
+                          isLeverage
+                            ? optimizerStats.tvl
+                            : isHip3
+                            ? optimizerStats.hip3Tvl
+                            : null
+                        }
                         targetLtv={isLeverage ? optimizerStats.targetLtv : null}
                         statusNote={
                           isLeverage
                             ? `Live leverage ≈ ${optimizerStats.leverage.toFixed(2)}x`
+                            : isHip3
+                            ? optimizerStats.hip3Validator
+                              ? `Delegating to ${optimizerStats.hip3Validator.slice(0, 6)}...${optimizerStats.hip3Validator.slice(-4)}`
+                              : 'Validator not configured'
                             : 'Coming soon'
                         }
                         onSelect={() => handleStrategySelect(strategy.id)}
@@ -292,12 +307,16 @@ export default function Home() {
                   balance={nativeBalance}
                   whypeBalance={whypeBalance}
                   depositedBalance={position?.deposited || 0}
+                  hip3Balance={hip3Position.deposited}
+                  hip3MinDeposit={hip3Position.minDeposit}
+                  hip3Validator={hip3Position.validator}
                   selectedStrategy={selectedStrategyId}
                   onStrategyChange={setSelectedStrategyId}
                   onSuccess={() => {
                     refetchPosition();
                     refetchNative();
                     refetchWHYPE();
+                    hip3Position.refetch();
                   }}
                 />
               </div>

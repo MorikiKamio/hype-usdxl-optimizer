@@ -6,11 +6,14 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./interfaces/IHypurrFiPool.sol";
+import "./interfaces/ICoreWriter.sol";
 
 contract HYPEUSDXLOptimizerLite is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     uint256 public constant MAX_BPS = 10_000;
+    uint256 public constant HIP3_DEFAULT_MIN = 100 * 1e18;
+    ICoreWriter public constant CORE_WRITER = ICoreWriter(0x3333333333333333333333333333333333333333);
 
     IERC20 public immutable HYPE;
     IERC20 public immutable USDXL;
@@ -23,18 +26,27 @@ contract HYPEUSDXLOptimizerLite is Ownable, ReentrancyGuard {
     uint256 public totalCollateral;
     uint256 public totalDebt;
     uint256 public totalShares;
+    uint256 public totalHip3Deposits;
 
     struct Position {
         uint256 shares;
     }
 
     mapping(address => Position) public positions;
+    mapping(address => uint256) public hip3Deposits;
+
+    address public hip3Validator;
+    uint256 public hip3MinDeposit = HIP3_DEFAULT_MIN;
 
     event Deposit(address indexed user, uint256 amount, uint256 sharesMinted, uint256 loops);
     event Withdraw(address indexed user, uint256 amount, uint256 sharesBurned);
+    event Hip3Deposit(address indexed user, uint256 amount);
+    event Hip3Withdraw(address indexed user, uint256 amount);
     event TargetLtvUpdated(uint256 targetLtvBps);
     event MaxLoopsUpdated(uint256 maxLoops);
     event MinHealthFactorUpdated(uint256 minHealthFactor);
+    event Hip3ValidatorUpdated(address validator);
+    event Hip3MinDepositUpdated(uint256 amount);
 
     constructor(address _hype, address _usdxl, address _pool) Ownable(msg.sender) {
         HYPE = IERC20(_hype);
@@ -61,6 +73,16 @@ contract HYPEUSDXLOptimizerLite is Ownable, ReentrancyGuard {
         require(newMin >= 1_100_000_000_000_000_000, "min too low");
         minHealthFactor = newMin;
         emit MinHealthFactorUpdated(newMin);
+    }
+
+    function setHip3Validator(address validator) external onlyOwner {
+        hip3Validator = validator;
+        emit Hip3ValidatorUpdated(validator);
+    }
+
+    function setHip3MinDeposit(uint256 amount) external onlyOwner {
+        hip3MinDeposit = amount;
+        emit Hip3MinDepositUpdated(amount);
     }
 
     function deposit(uint256 amount) external nonReentrant {
@@ -141,6 +163,19 @@ contract HYPEUSDXLOptimizerLite is Ownable, ReentrancyGuard {
         ltvBps = collateralPortion == 0 ? 0 : (debtPortion * MAX_BPS) / collateralPortion;
     }
 
+    function getHip3Position(address user)
+        external
+        view
+        returns (
+            uint256 deposited,
+            uint256 totalDeposited,
+            uint256 minDeposit,
+            address validator
+        )
+    {
+        return (hip3Deposits[user], totalHip3Deposits, hip3MinDeposit, hip3Validator);
+    }
+
     function _leverageUp() internal returns (uint256 loops) {
         while (loops < maxLoops) {
             if (totalCollateral == 0) {
@@ -193,6 +228,32 @@ contract HYPEUSDXLOptimizerLite is Ownable, ReentrancyGuard {
         totalDebt += amount;
         _supply(amount);
         totalCollateral += amount;
+    }
+
+    function depositHip3(uint256 amount) external nonReentrant {
+        require(hip3Validator != address(0), "validator unset");
+        require(amount >= hip3MinDeposit, "below min");
+        HYPE.safeTransferFrom(msg.sender, address(this), amount);
+        _delegateToHip3(amount);
+        hip3Deposits[msg.sender] += amount;
+        totalHip3Deposits += amount;
+        emit Hip3Deposit(msg.sender, amount);
+    }
+
+    function withdrawHip3(uint256 amount) external nonReentrant {
+        require(amount > 0, "zero");
+        uint256 balance = hip3Deposits[msg.sender];
+        require(balance >= amount, "insufficient");
+        hip3Deposits[msg.sender] = balance - amount;
+        totalHip3Deposits -= amount;
+        require(CORE_WRITER.undelegateHYPE(hip3Validator, amount), "undelegate fail");
+        HYPE.safeTransfer(msg.sender, amount);
+        emit Hip3Withdraw(msg.sender, amount);
+    }
+
+    function _delegateToHip3(uint256 amount) internal {
+        HYPE.forceApprove(address(CORE_WRITER), amount);
+        require(CORE_WRITER.delegateHYPE(hip3Validator, amount), "delegate fail");
     }
 
     function _supply(uint256 amount) internal {

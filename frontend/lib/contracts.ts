@@ -26,6 +26,20 @@ export const OPTIMIZER_ABI = [
     outputs: [],
   },
   {
+    name: 'depositHip3',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: 'amount', type: 'uint256' }],
+    outputs: [],
+  },
+  {
+    name: 'withdrawHip3',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: 'amount', type: 'uint256' }],
+    outputs: [],
+  },
+  {
     name: 'getPosition',
     type: 'function',
     stateMutability: 'view',
@@ -44,6 +58,18 @@ export const OPTIMIZER_ABI = [
     stateMutability: 'view',
     inputs: [{ name: 'user', type: 'address' }],
     outputs: [{ name: 'shares', type: 'uint256' }],
+  },
+  {
+    name: 'getHip3Position',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'user', type: 'address' }],
+    outputs: [
+      { name: 'deposited', type: 'uint256' },
+      { name: 'totalDeposited', type: 'uint256' },
+      { name: 'minDeposit', type: 'uint256' },
+      { name: 'validator', type: 'address' },
+    ],
   },
 ] as const;
 

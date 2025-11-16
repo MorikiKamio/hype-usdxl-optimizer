@@ -120,6 +120,16 @@ export default function PositionCard({ position, isConnected }: PositionCardProp
               </p>
             </div>
           </div>
+          {position.hip3Deposited && position.hip3Deposited > 0 && (
+            <div style={{ marginTop: '16px' }}>
+              <p style={{ color: COLORS.textSecondary, fontSize: '13px', marginBottom: '4px' }}>
+                HIP-3 Delegated
+              </p>
+              <p style={{ fontSize: '18px', color: COLORS.textPrimary }}>
+                {position.hip3Deposited.toLocaleString()} HYPE
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>

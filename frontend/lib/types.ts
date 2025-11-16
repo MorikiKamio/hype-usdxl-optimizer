@@ -19,6 +19,7 @@ export interface UserPosition {
   collateral: number;
   debt: number;
   ltv: number;
+  hip3Deposited?: number;
 }
 
 export const STRATEGIES: Strategy[] = [
