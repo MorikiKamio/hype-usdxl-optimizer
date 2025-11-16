@@ -1,0 +1,2 @@
+Deployed contract: 0x61894f55E565664D2Ba97B94d9015B39E0103790 on HyperEVM (chain 999)
+]
