@@ -20,6 +20,9 @@ interface StrategyCardProps {
   isActive?: boolean;
   isSelected?: boolean;
   liveApr?: number | null;
+  liveTvl?: number | null;
+  targetLtv?: number | null;
+  statusNote?: string;
   onSelect?: () => void;
 }
 
@@ -28,6 +31,9 @@ export default function StrategyCard({
   isActive = false,
   isSelected = false,
   liveApr,
+  liveTvl,
+  targetLtv,
+  statusNote,
   onSelect,
 }: StrategyCardProps) {
   const riskColors = {
@@ -198,15 +204,37 @@ export default function StrategyCard({
             {strategy.risk} Risk
           </span>
           <span style={{ fontSize: '14px', color: COLORS.textSecondary }}>
-            TVL: ${(strategy.tvl / 1_000_000).toFixed(1)}M
+            TVL:{' '}
+            {typeof liveTvl === 'number'
+              ? `${liveTvl.toFixed(2)} WHYPE`
+              : `$${(strategy.tvl / 1_000_000).toFixed(1)}M`}
           </span>
         </div>
+        {targetLtv && (
+          <span style={{ fontSize: '12px', color: COLORS.textSecondary }}>
+            Target LTV: {targetLtv.toFixed(1)}%
+          </span>
+        )}
         {strategy.minDeposit > 0 && (
           <span style={{ fontSize: '12px', color: COLORS.textSecondary }}>
             Min: {(strategy.minDeposit / 1000).toFixed(0)}K HYPE
           </span>
         )}
       </div>
+      {statusNote && (
+        <div
+          style={{
+            marginTop: '12px',
+            padding: '10px',
+            borderRadius: '6px',
+            border: `1px dashed ${COLORS.border}`,
+            color: COLORS.textSecondary,
+            fontSize: '13px',
+          }}
+        >
+          {statusNote}
+        </div>
+      )}
     </div>
   );
 }

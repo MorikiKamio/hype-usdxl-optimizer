@@ -11,6 +11,7 @@ import { STRATEGIES } from '@/lib/types';
 import { useUserPosition, useHYPEBalance } from '@/hooks/useContract';
 import { useNativeHYPEBalance } from '@/hooks/useNativeHYPE';
 import { useHypurrFiRates } from '@/hooks/useHypurrFiRates';
+import { useOptimizerStats } from '@/hooks/useOptimizerStats';
 
 function deriveStrategyApr(
   strategyId: string,
@@ -51,6 +52,7 @@ export default function Home() {
   const [selectedStrategyId, setSelectedStrategyId] = useState<string>('auto');
   const depositFormRef = useRef<HTMLDivElement>(null);
   const { supplyAPR, borrowAPR, isLoading: aprLoading } = useHypurrFiRates();
+  const optimizerStats = useOptimizerStats();
 
   const strategyAprs = useMemo(() => {
     const map: Record<string, number | null> = {};
@@ -262,16 +264,26 @@ export default function Home() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  {STRATEGIES.map((strategy) => (
-                    <StrategyCard
-                      key={strategy.id}
-                      strategy={strategy}
-                      isActive={strategy.name === userPosition.activeStrategy}
-                      isSelected={selectedStrategyId === strategy.id}
-                      liveApr={strategyAprs[strategy.id]}
-                      onSelect={() => handleStrategySelect(strategy.id)}
-                    />
-                  ))}
+                  {STRATEGIES.map((strategy) => {
+                    const isLeverage = strategy.id === 'HYPE_LEVERAGE';
+                    return (
+                      <StrategyCard
+                        key={strategy.id}
+                        strategy={strategy}
+                        isActive={strategy.name === userPosition.activeStrategy}
+                        isSelected={selectedStrategyId === strategy.id}
+                        liveApr={strategyAprs[strategy.id]}
+                        liveTvl={isLeverage ? optimizerStats.tvl : null}
+                        targetLtv={isLeverage ? optimizerStats.targetLtv : null}
+                        statusNote={
+                          isLeverage
+                            ? `Live leverage ≈ ${optimizerStats.leverage.toFixed(2)}x`
+                            : 'Coming soon'
+                        }
+                        onSelect={() => handleStrategySelect(strategy.id)}
+                      />
+                    );
+                  })}
                 </div>
               </div>
 
