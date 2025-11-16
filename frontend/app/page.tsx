@@ -1,7 +1,7 @@
 'use client';
 
 import { useAccount } from 'wagmi';
-import { useRef, useState } from 'react';
+import { useRef, useState, useMemo } from 'react';
 import { TrendingUp, Shield } from 'lucide-react';
 import Header from '@/components/Header';
 import PositionCard from '@/components/PositionCard';
@@ -11,6 +11,27 @@ import { STRATEGIES } from '@/lib/types';
 import { useUserPosition, useHYPEBalance } from '@/hooks/useContract';
 import { useNativeHYPEBalance } from '@/hooks/useNativeHYPE';
 import { useHypurrFiRates } from '@/hooks/useHypurrFiRates';
+
+function deriveStrategyApr(
+  strategyId: string,
+  supplyApr: number | null,
+  borrowApr: number | null
+): number | null {
+  if (supplyApr === null) return null;
+  switch (strategyId) {
+    case 'HYPE_LEVERAGE':
+      if (borrowApr === null) return null;
+      return Math.max(supplyApr * 3 - borrowApr * 2, 0);
+    case 'HYBRID_MULTI_ASSET':
+      return supplyApr * 0.9;
+    case 'CORE_WRITER_HIP3':
+      return supplyApr * 0.5;
+    case 'USDXL_STABILITY':
+      return supplyApr * 0.8;
+    default:
+      return null;
+  }
+}
 
 const COLORS = {
   bg: '#0a1f1f',
@@ -29,10 +50,19 @@ export default function Home() {
   const { balance: nativeBalance, refetch: refetchNative } = useNativeHYPEBalance(address);
   const [selectedStrategyId, setSelectedStrategyId] = useState<string>('auto');
   const depositFormRef = useRef<HTMLDivElement>(null);
-  const { supplyAPR, isLoading: aprLoading } = useHypurrFiRates();
+  const { supplyAPR, borrowAPR, isLoading: aprLoading } = useHypurrFiRates();
+
+  const strategyAprs = useMemo(() => {
+    const map: Record<string, number | null> = {};
+    STRATEGIES.forEach((strategy) => {
+      map[strategy.id] = deriveStrategyApr(strategy.id, supplyAPR, borrowAPR);
+    });
+    return map;
+  }, [supplyAPR, borrowAPR]);
 
   // Construct user position for display
-  const liveAPR = supplyAPR ?? position?.currentAPR ?? 0;
+  const selectedStrategyApr = strategyAprs[selectedStrategyId] ?? null;
+  const liveAPR = selectedStrategyApr ?? supplyAPR ?? position?.currentAPR ?? 0;
 
   const userPosition = position
     ? {
@@ -232,6 +262,7 @@ export default function Home() {
                       strategy={strategy}
                       isActive={strategy.name === userPosition.activeStrategy}
                       isSelected={selectedStrategyId === strategy.id}
+                      liveApr={strategyAprs[strategy.id]}
                       onSelect={() => handleStrategySelect(strategy.id)}
                     />
                   ))}

@@ -19,6 +19,7 @@ interface StrategyCardProps {
   strategy: Strategy;
   isActive?: boolean;
   isSelected?: boolean;
+  liveApr?: number | null;
   onSelect?: () => void;
 }
 
@@ -26,6 +27,7 @@ export default function StrategyCard({
   strategy,
   isActive = false,
   isSelected = false,
+  liveApr,
   onSelect,
 }: StrategyCardProps) {
   const riskColors = {
@@ -47,6 +49,9 @@ export default function StrategyCard({
     if (isSelected) return `${COLORS.primary}11`;
     return COLORS.bg;
   };
+
+  const displayApr = typeof liveApr === 'number' ? liveApr : strategy.apr;
+  const aprLabel = typeof liveApr === 'number' ? 'Live APR' : 'APR';
 
   return (
     <div
@@ -154,7 +159,7 @@ export default function StrategyCard({
               lineHeight: 1,
             }}
           >
-            {strategy.apr}%
+            {displayApr.toFixed(2)}%
           </p>
           <p
             style={{
@@ -163,7 +168,7 @@ export default function StrategyCard({
               margin: '4px 0 0 0',
             }}
           >
-            APR
+            {aprLabel}
           </p>
         </div>
       </div>
