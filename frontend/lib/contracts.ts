@@ -72,3 +72,32 @@ export enum StrategyType {
   Stability = 0,
   Leverage = 1,
 }
+
+export const HYPURRFI_POOL_ABI = [
+  {
+    name: 'getReserveData',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'asset', type: 'address' }],
+    outputs: [
+      { name: 'availableLiquidity', type: 'uint256' },
+      { name: 'totalDebt', type: 'uint256' },
+      { name: 'liquidityRate', type: 'uint256' },
+      { name: 'variableBorrowRate', type: 'uint256' },
+    ],
+  },
+  {
+    name: 'getUserAccountData',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'user', type: 'address' }],
+    outputs: [
+      { type: 'uint256', name: 'totalCollateralBase' },
+      { type: 'uint256', name: 'totalDebtBase' },
+      { type: 'uint256', name: 'availableBorrowsBase' },
+      { type: 'uint256', name: 'currentLiquidationThreshold' },
+      { type: 'uint256', name: 'ltv' },
+      { type: 'uint256', name: 'healthFactor' },
+    ],
+  },
+] as const;

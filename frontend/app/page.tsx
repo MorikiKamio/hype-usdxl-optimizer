@@ -10,6 +10,7 @@ import DepositForm from '@/components/DepositForm';
 import { STRATEGIES } from '@/lib/types';
 import { useUserPosition, useHYPEBalance } from '@/hooks/useContract';
 import { useNativeHYPEBalance } from '@/hooks/useNativeHYPE';
+import { useHypurrFiRates } from '@/hooks/useHypurrFiRates';
 
 const COLORS = {
   bg: '#0a1f1f',
@@ -28,20 +29,23 @@ export default function Home() {
   const { balance: nativeBalance, refetch: refetchNative } = useNativeHYPEBalance(address);
   const [selectedStrategyId, setSelectedStrategyId] = useState<string>('auto');
   const depositFormRef = useRef<HTMLDivElement>(null);
+  const { supplyAPR, isLoading: aprLoading } = useHypurrFiRates();
 
   // Construct user position for display
+  const liveAPR = supplyAPR ?? position?.currentAPR ?? 0;
+
   const userPosition = position
     ? {
         balance: nativeBalance,
         deposited: position.deposited,
-        currentAPR: position.currentAPR,
+        currentAPR: liveAPR,
         healthFactor: position.healthFactor,
         activeStrategy: position.activeStrategy,
       }
     : {
         balance: nativeBalance,
         deposited: 0,
-        currentAPR: 0,
+        currentAPR: liveAPR,
         healthFactor: 0,
         activeStrategy: '',
       };
@@ -213,7 +217,11 @@ export default function Home() {
                         fontSize: '13px',
                       }}
                     >
-                      👆 Click to deposit
+                      {aprLoading
+                        ? 'Fetching APR...'
+                        : supplyAPR !== null
+                        ? `${supplyAPR.toFixed(2)}%`
+                        : 'N/A'}
                     </span>
                   </div>
                 </div>
