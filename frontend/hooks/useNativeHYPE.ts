@@ -2,12 +2,12 @@
 
 import { useBalance } from 'wagmi';
 import { Address } from 'viem';
-import { hyperliquidTestnet } from '@/app/providers';
+import { hyperEvmMainnet } from '@/app/providers';
 
 export function useNativeHYPEBalance(address: Address | undefined) {
   const { data, isLoading, refetch } = useBalance({
     address,
-    chainId: hyperliquidTestnet.id,
+    chainId: hyperEvmMainnet.id,
     query: {
       enabled: !!address,
     },

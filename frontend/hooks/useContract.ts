@@ -7,61 +7,24 @@ import {
   useWaitForTransactionReceipt,
 } from 'wagmi';
 import { parseEther, formatEther, Address } from 'viem';
-import { OPTIMIZER_ADDRESS, OPTIMIZER_ABI, ERC20_ABI, HYPE_TOKEN_ADDRESS } from '@/lib/contracts';
-import { STRATEGIES } from '@/lib/types';
-import { hyperliquidTestnet } from '@/app/providers';
+import {
+  OPTIMIZER_ADDRESS,
+  OPTIMIZER_ABI,
+  ERC20_ABI,
+  WHYPE_ADDRESS,
+  StrategyType,
+} from '@/lib/contracts';
+import { hyperEvmMainnet } from '@/app/providers';
 
-// Get user position from contract
-export function useUserPosition(address: Address | undefined) {
-  const { data, isLoading, error, refetch } = useReadContract({
-    address: OPTIMIZER_ADDRESS,
-    abi: OPTIMIZER_ABI,
-    functionName: 'getUserPosition',
-    args: address ? [address] : undefined,
-    query: {
-      enabled:
-        !!address &&
-        OPTIMIZER_ADDRESS !== '0x0000000000000000000000000000000000000000',
-    },
-  });
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
-  // Transform contract data to UI format
-  const position = data
-    ? {
-        shares: data.shares,
-        hypeCollateral: Number(formatEther(data.hypeCollateral)),
-        usdxlCollateral: Number(formatEther(data.usdxlCollateral)),
-        usdxlDebt: Number(formatEther(data.usdxlDebt)),
-        hip3Delegated: Number(formatEther(data.hip3Delegated)),
-        activeStrategy: STRATEGIES[data.activeStrategy]?.name || 'Unknown',
-        currentAPR: STRATEGIES[data.activeStrategy]?.apr || 0,
-        deposited: Number(
-          formatEther(data.hypeCollateral + data.usdxlCollateral + data.hip3Delegated),
-        ),
-        healthFactor: 1.45, // TODO: Calculate from HypurrFi
-      }
-    : null;
-
-  return {
-    position,
-    isLoading,
-    error,
-    refetch,
-  };
-}
-
-// Get HYPE token balance
 export function useHYPEBalance(address: Address | undefined) {
   const { data, isLoading, refetch } = useReadContract({
-    address: HYPE_TOKEN_ADDRESS,
+    address: WHYPE_ADDRESS,
     abi: ERC20_ABI,
     functionName: 'balanceOf',
     args: address ? [address] : undefined,
-    query: {
-      enabled:
-        !!address &&
-        HYPE_TOKEN_ADDRESS !== '0x0000000000000000000000000000000000000000',
-    },
+    query: { enabled: !!address && WHYPE_ADDRESS !== ZERO_ADDRESS },
   });
 
   return {
@@ -71,49 +34,79 @@ export function useHYPEBalance(address: Address | undefined) {
   };
 }
 
-// Deposit functions
-export function useDeposit() {
-  const { writeContract, data: hash, isPending, error } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
-    hash,
+export function useUserPosition(address: Address | undefined) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: OPTIMIZER_ADDRESS,
+    abi: OPTIMIZER_ABI,
+    functionName: 'getPosition',
+    args: address ? [address] : undefined,
+    query: { enabled: !!address && OPTIMIZER_ADDRESS !== ZERO_ADDRESS },
   });
+
+  if (!data) {
+    return { position: null, isLoading, error, refetch };
+  }
+
+  const [deposited, strategy] = data as [bigint, bigint];
+
+  return {
+    position: {
+      deposited: Number(formatEther(deposited)),
+      strategy: Number(strategy),
+      activeStrategy: Number(strategy) === StrategyType.Stability ? 'Stability' : 'Leverage',
+      currentAPR: Number(strategy) === StrategyType.Stability ? 4 : 18,
+      healthFactor: 0,
+    },
+    isLoading,
+    error,
+    refetch,
+  };
+}
+
+export function useApprove() {
   const { address } = useAccount();
+  const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
-  const depositAuto = async (amount: string) => {
-    if (!amount || parseFloat(amount) <= 0) {
-      throw new Error('Invalid amount');
-    }
-
+  const approve = async (amount: string) => {
     if (!address) throw new Error('Wallet not connected');
+    await writeContract({
+      address: WHYPE_ADDRESS,
+      abi: ERC20_ABI,
+      functionName: 'approve',
+      chain: hyperEvmMainnet,
+      account: address,
+      args: [OPTIMIZER_ADDRESS, parseEther(amount)],
+    });
+  };
+
+  return { approve, isPending, isConfirming, isSuccess, error };
+}
+
+export function useDeposit() {
+  const { address } = useAccount();
+  const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+
+  const deposit = async (amount: string) => {
+    if (!address) throw new Error('Wallet not connected');
+    if (!amount || parseFloat(amount) <= 0) throw new Error('Invalid amount');
 
     await writeContract({
       address: OPTIMIZER_ADDRESS,
       abi: OPTIMIZER_ABI,
-      functionName: 'depositAuto',
-      chain: hyperliquidTestnet,
+      functionName: 'deposit',
+      chain: hyperEvmMainnet,
       account: address,
       args: [parseEther(amount)],
     });
   };
 
-  const depositToStrategy = async (amount: string, strategyIndex: number) => {
-    if (!amount || parseFloat(amount) <= 0) {
-      throw new Error('Invalid amount');
-    }
-
-    if (!address) throw new Error('Wallet not connected');
-
-    await writeContract({
-      address: OPTIMIZER_ADDRESS,
-      abi: OPTIMIZER_ABI,
-      functionName: 'depositToStrategy',
-      chain: hyperliquidTestnet,
-      account: address,
-      args: [parseEther(amount), strategyIndex],
-    });
-  };
+  const depositAuto = (amount: string) => deposit(amount);
+  const depositToStrategy = (amount: string, _strategy: number) => deposit(amount);
 
   return {
+    deposit,
     depositAuto,
     depositToStrategy,
     isPending,
@@ -124,31 +117,24 @@ export function useDeposit() {
   };
 }
 
-// Approve HYPE token
-export function useApprove() {
-  const { writeContract, data: hash, isPending } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
-    hash,
-  });
+export function useWithdraw() {
   const { address } = useAccount();
+  const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
-  const approve = async (amount: string) => {
+  const withdraw = async (amount: string) => {
     if (!address) throw new Error('Wallet not connected');
+    if (!amount || parseFloat(amount) <= 0) throw new Error('Invalid amount');
 
     await writeContract({
-      address: HYPE_TOKEN_ADDRESS,
-      abi: ERC20_ABI,
-      functionName: 'approve',
-      chain: hyperliquidTestnet,
+      address: OPTIMIZER_ADDRESS,
+      abi: OPTIMIZER_ABI,
+      functionName: 'withdraw',
+      chain: hyperEvmMainnet,
       account: address,
-      args: [OPTIMIZER_ADDRESS, parseEther(amount)],
+      args: [parseEther(amount)],
     });
   };
 
-  return {
-    approve,
-    isPending,
-    isConfirming,
-    isSuccess,
-  };
+  return { withdraw, isPending, isConfirming, isSuccess, error, hash };
 }

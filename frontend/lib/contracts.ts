@@ -1,84 +1,60 @@
 import { Address } from 'viem';
 
-const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+export const OPTIMIZER_ADDRESS: Address = (process.env.NEXT_PUBLIC_OPTIMIZER_ADDRESS ||
+  '0x0000000000000000000000000000000000000000') as Address;
+export const WHYPE_ADDRESS: Address = (process.env.NEXT_PUBLIC_WHYPE_ADDRESS ||
+  '0x0000000000000000000000000000000000000000') as Address;
+export const USDXL_ADDRESS: Address = (process.env.NEXT_PUBLIC_USDXL_ADDRESS ||
+  '0x0000000000000000000000000000000000000000') as Address;
+export const HYPURRFI_POOL_ADDRESS: Address = (process.env.NEXT_PUBLIC_HYPURRFI_POOL ||
+  '0x0000000000000000000000000000000000000000') as Address;
 
-export const OPTIMIZER_ADDRESS = (process.env.NEXT_PUBLIC_OPTIMIZER_ADDRESS ||
-  ZERO_ADDRESS) as Address;
-export const MOCK_USDXL_ADDRESS = (process.env.NEXT_PUBLIC_MOCK_USDXL_ADDRESS ||
-  ZERO_ADDRESS) as Address;
-export const HYPE_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_WHYPE_ADDRESS ||
-  process.env.NEXT_PUBLIC_HYPE_TOKEN ||
-  ZERO_ADDRESS) as Address;
-
-// Simplified ABI for frontend
+// Lite optimizer ABI
 export const OPTIMIZER_ABI = [
   {
-    name: 'depositAuto',
+    name: 'deposit',
     type: 'function',
     stateMutability: 'nonpayable',
     inputs: [{ name: 'amount', type: 'uint256' }],
-    outputs: [{ name: 'shares', type: 'uint256' }],
-  },
-  {
-    name: 'depositToStrategy',
-    type: 'function',
-    stateMutability: 'nonpayable',
-    inputs: [
-      { name: 'amount', type: 'uint256' },
-      { name: 'strategy', type: 'uint8' },
-    ],
-    outputs: [{ name: 'shares', type: 'uint256' }],
+    outputs: [],
   },
   {
     name: 'withdraw',
     type: 'function',
     stateMutability: 'nonpayable',
-    inputs: [{ name: 'shares', type: 'uint256' }],
-    outputs: [{ name: 'amount', type: 'uint256' }],
+    inputs: [{ name: 'amount', type: 'uint256' }],
+    outputs: [],
   },
   {
-    name: 'getUserPosition',
+    name: 'getPosition',
     type: 'function',
     stateMutability: 'view',
     inputs: [{ name: 'user', type: 'address' }],
     outputs: [
-      {
-        type: 'tuple',
-        components: [
-          { name: 'shares', type: 'uint256' },
-          { name: 'hypeCollateral', type: 'uint256' },
-          { name: 'usdxlCollateral', type: 'uint256' },
-          { name: 'usdxlDebt', type: 'uint256' },
-          { name: 'hip3Delegated', type: 'uint256' },
-          { name: 'activeStrategy', type: 'uint8' },
-        ],
-      },
+      { name: 'deposited', type: 'uint256' },
+      { name: 'strategy', type: 'uint256' },
     ],
   },
   {
-    name: 'selectOptimalStrategy',
+    name: 'positions',
     type: 'function',
     stateMutability: 'view',
-    inputs: [{ name: 'amount', type: 'uint256' }],
-    outputs: [{ name: '', type: 'uint8' }],
-  },
-  {
-    name: 'totalShares',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [],
-    outputs: [{ name: '', type: 'uint256' }],
+    inputs: [{ name: 'user', type: 'address' }],
+    outputs: [
+      { name: 'deposited', type: 'uint256' },
+      { name: 'strategy', type: 'uint256' },
+    ],
   },
 ] as const;
 
-// ERC20 ABI (HYPE token)
+// Minimal ERC20 ABI (WHYPE/USDXL)
 export const ERC20_ABI = [
   {
     name: 'balanceOf',
     type: 'function',
     stateMutability: 'view',
     inputs: [{ name: 'account', type: 'address' }],
-    outputs: [{ name: '', type: 'uint256' }],
+    outputs: [{ type: 'uint256' }],
   },
   {
     name: 'approve',
@@ -88,24 +64,11 @@ export const ERC20_ABI = [
       { name: 'spender', type: 'address' },
       { name: 'amount', type: 'uint256' },
     ],
-    outputs: [{ name: '', type: 'bool' }],
-  },
-  {
-    name: 'allowance',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [
-      { name: 'owner', type: 'address' },
-      { name: 'spender', type: 'address' },
-    ],
-    outputs: [{ name: '', type: 'uint256' }],
+    outputs: [{ type: 'bool' }],
   },
 ] as const;
 
-// Strategy Enum
 export enum StrategyType {
-  USDXL_STABILITY = 0,
-  HYPE_LEVERAGE = 1,
-  HYBRID_MULTI_ASSET = 2,
-  CORE_WRITER_HIP3 = 3,
+  Stability = 0,
+  Leverage = 1,
 }

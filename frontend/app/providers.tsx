@@ -7,33 +7,33 @@ import { RainbowKitProvider, getDefaultConfig } from '@rainbow-me/rainbowkit';
 import { defineChain } from 'viem';
 import { ReactNode } from 'react';
 
-// HyperEVM Testnet定義
-export const hyperliquidTestnet = defineChain({
-  id: 998,
-  name: 'HyperEVM Testnet',
-  network: 'hyperliquid-testnet',
+// HyperEVM Mainnet definition
+export const hyperEvmMainnet = defineChain({
+  id: 999,
+  name: 'HyperEVM',
+  network: 'hyperliquid-mainnet',
   nativeCurrency: {
     decimals: 18,
     name: 'HYPE',
     symbol: 'HYPE',
   },
   rpcUrls: {
-    default: { http: ['https://rpc.hyperliquid-testnet.xyz/evm'] },
-    public: { http: ['https://rpc.hyperliquid-testnet.xyz/evm'] },
+    default: { http: ['https://rpc.hypurrscan.io'] },
+    public: { http: ['https://rpc.hypurrscan.io'] },
   },
   blockExplorers: {
     default: {
       name: 'HyperEVM Explorer',
-      url: 'https://explorer.hyperliquid-testnet.xyz',
+      url: 'https://hyperevmscan.io',
     },
   },
-  testnet: true,
+  testnet: false,
 });
 
 const config = getDefaultConfig({
   appName: 'HYPE USDXL Optimizer',
   projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || 'YOUR_PROJECT_ID',
-  chains: [hyperliquidTestnet],
+  chains: [hyperEvmMainnet],
   ssr: true,
 });
 

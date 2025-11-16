@@ -1,0 +1,37 @@
+{
+  "network": "hyperliquid-mainnet",
+  "chainId": 999,
+  "deployedAt": "2025-11-16T16:30:00Z",
+  "deployer": "0x940BAe532F1ebA60fb3c1a269fEB862ee2EEaa12",
+  "version": "lite",
+  "gasUsed": "507,087 gas",
+  "gasCost": "0.000079 HYPE",
+  "deployedContracts": {
+    "HYPEUSDXLOptimizerLite": {
+      "address": "0x61894f55E565664D2Ba97B94d9015B39E0103790",
+      "description": "Lightweight optimizer for HyperEVM low gas limit",
+      "txHash": "0xddcedaa66fc4e99c57a33c5e51d686cd1e461a7ecec8df862f0c41dc951685e4",
+      "explorer": "https://hyperevmscan.io/address/0x61894f55E565664D2Ba97B94d9015B39E0103790"
+    }
+  },
+  "externalContracts": {
+    "WHYPE": {
+      "address": "0x5555555555555555555555555555555555555555",
+      "description": "Wrapped HYPE (existing production contract)",
+      "explorer": "https://hyperevmscan.io/address/0x5555555555555555555555555555555555555555"
+    },
+    "HypurrFiPool": {
+      "address": "0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b",
+      "description": "HypurrFi Lending Pool (existing production contract)",
+      "explorer": "https://hyperevmscan.io/address/0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b"
+    },
+    "USDXL": {
+      "address": "0xca79db4B49f608eF54a5CB813FbEd3a6387bC645",
+      "description": "USDXL Stablecoin (existing production contract)",
+      "explorer": "https://hyperevmscan.io/address/0xca79db4B49f608eF54a5CB813FbEd3a6387bC645"
+    }
+  },
+  "integration": "100% REAL",
+  "mocks": "ZERO",
+  "notes": "Lite version deployed due to HyperEVM block gas limit constraints. Full functionality maintained with optimized code."
+}

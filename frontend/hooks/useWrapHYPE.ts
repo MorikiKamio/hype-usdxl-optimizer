@@ -2,11 +2,8 @@
 
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { parseEther } from 'viem';
-import { hyperliquidTestnet } from '@/app/providers';
-import { HYPE_TOKEN_ADDRESS } from '@/lib/contracts';
-
-const WHYPE_ADDRESS =
-  (process.env.NEXT_PUBLIC_WHYPE_ADDRESS as `0x${string}`) || HYPE_TOKEN_ADDRESS;
+import { hyperEvmMainnet } from '@/app/providers';
+import { WHYPE_ADDRESS } from '@/lib/contracts';
 
 const WHYPE_ABI = [
   {
@@ -38,7 +35,7 @@ export function useWrapHYPE() {
       address: WHYPE_ADDRESS,
       abi: WHYPE_ABI,
       functionName: 'deposit',
-      chain: hyperliquidTestnet,
+      chain: hyperEvmMainnet,
       account: address,
       value: parseEther(amount),
     });
@@ -52,7 +49,7 @@ export function useWrapHYPE() {
       address: WHYPE_ADDRESS,
       abi: WHYPE_ABI,
       functionName: 'withdraw',
-      chain: hyperliquidTestnet,
+      chain: hyperEvmMainnet,
       account: address,
       args: [parseEther(amount)],
     });

@@ -10,6 +10,7 @@ import DepositForm from '@/components/DepositForm';
 import { STRATEGIES } from '@/lib/types';
 import { useUserPosition, useHYPEBalance } from '@/hooks/useContract';
 import { useNativeHYPEBalance } from '@/hooks/useNativeHYPE';
+import { OPTIMIZER_ADDRESS } from '@/lib/contracts';
 
 const COLORS = {
   bg: '#0a1f1f',
@@ -265,7 +266,7 @@ export default function Home() {
             fontSize: '14px',
           }}
         >
-          <p>Contract: 0x... • HyperEVM Testnet (Chain ID: 998)</p>
+          <p>Optimizer: {OPTIMIZER_ADDRESS} • HyperEVM Mainnet (Chain ID: 999)</p>
           <p style={{ marginTop: '8px' }}>Built for HLH Seoul 2025 • Powered by HypurrFi</p>
         </div>
       </footer>
